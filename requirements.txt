@@ -1,6 +1,7 @@
 reflex>=0.5.3
 requests>=2.32.3
 psycopg2-binary
+qrcode>=7.4.2
 
 pip~=24.0
 wheel~=0.44.0
@@ -15,3 +16,5 @@ charset-normalizer~=3.3.2
 alembic~=1.13.2
 SQLAlchemy~=2.0.32
 sqlmodel~=0.0.21
+pillow~=10.4.0
+pydantic~=2.8.2

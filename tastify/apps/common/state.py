@@ -3,7 +3,7 @@ import uuid
 import reflex as rx
 from sqlmodel import select
 
-from tastify.apps.common import User
+from tastify.db.user import User
 
 
 class CommonState(rx.State):

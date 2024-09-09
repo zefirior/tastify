@@ -3,14 +3,14 @@ import asyncio
 import reflex as rx
 from sqlmodel import select
 
-from tastify.apps.common import CommonState
+from tastify.apps.common.state import CommonState
 from tastify.apps.router import Router
-from tastify.apps.spotify.model import SpotifyConnector, SpotifyConnectorState
 from tastify.core.integration.spotify.client import SpotifyClient, UserTokenData, UserTrack
+from tastify import db
 
 
 class SpotifyState(rx.State):
-    state: SpotifyConnectorState = SpotifyConnectorState.DISCONNECTED
+    state: db.SpotifyConnectorState = db.SpotifyConnectorState.DISCONNECTED
 
     async def connect(self):
         """Connect to Spotify."""
@@ -46,7 +46,7 @@ class SpotifyState(rx.State):
 
             user_token_data = client.get_user_token(code=code)
             print(user_token_data)
-            self.state = connector.state = SpotifyConnectorState.SYNC_DATA
+            self.state = connector.state = db.SpotifyConnectorState.SYNC_DATA
             connector.scope = user_token_data.scope
             connector.access_token = user_token_data.access_token
             connector.code_expires_at = user_token_data.expires_at
@@ -59,11 +59,11 @@ class SpotifyState(rx.State):
             yield Router.to_home()
 
 
-def get_or_create_connector(session, user_uid) -> SpotifyConnector:
+def get_or_create_connector(session, user_uid) -> db.SpotifyConnector:
     """Get or create a connector."""
-    connector = session.exec(select(SpotifyConnector).where(SpotifyConnector.user_uid == user_uid)).first()
+    connector = session.exec(select(db.SpotifyConnector).where(db.SpotifyConnector.user_uid == user_uid)).first()
     if not connector:
-        connector = SpotifyConnector(
+        connector = db.SpotifyConnector(
             user_uid=user_uid,
         )
         session.add(connector)
@@ -72,7 +72,7 @@ def get_or_create_connector(session, user_uid) -> SpotifyConnector:
 
 
 class SpotifyListUserTracksState(rx.State):
-    state: SpotifyConnectorState = SpotifyConnectorState.DISCONNECTED
+    state: db.SpotifyConnectorState = db.SpotifyConnectorState.DISCONNECTED
     show_tracks: bool = False
     tracks: list[UserTrack] = []
 
@@ -84,14 +84,14 @@ class SpotifyListUserTracksState(rx.State):
             connector = get_or_create_connector(session, common.get_client_uid())
             print(connector)
             if connector.is_expired():
-                self.state = SpotifyConnectorState.DISCONNECTED
+                self.state = db.SpotifyConnectorState.DISCONNECTED
                 return
         self.tracks = client.get_user_tracks(to_user_token_data(connector))
         self.state = connector.state
         print(f'Loaded {len(self.tracks)} tracks')
 
 
-def to_user_token_data(connector: SpotifyConnector) -> UserTokenData:
+def to_user_token_data(connector: db.SpotifyConnector) -> UserTokenData:
     return UserTokenData(
         access_token=connector.access_token,
         token_type=connector.token_type.value,

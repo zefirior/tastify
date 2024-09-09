@@ -1,7 +1,7 @@
 import reflex as rx
 
+from tastify import db
 from tastify.apps.room.state import JoinRoomState, CreateRoomState
-from tastify.apps.spotify import SpotifyConnectorState
 from tastify.apps.spotify.state import SpotifyState, SpotifyListUserTracksState
 from tastify.core.integration.spotify.client import UserTrack
 
@@ -32,7 +32,7 @@ def index() -> rx.Component:
         rx.spacer(),
         rx.heading("Your playlists", size="4"),
         rx.cond(
-            SpotifyListUserTracksState.state == SpotifyConnectorState.DISCONNECTED,
+            SpotifyListUserTracksState.state == db.SpotifyConnectorState.DISCONNECTED,
             rx.button("Spotify", on_click=SpotifyState.connect),
             rx.table.root(
                 rx.table.header(
