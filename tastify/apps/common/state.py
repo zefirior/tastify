@@ -8,10 +8,9 @@ from tastify.db.user import User
 
 class CommonState(rx.State):
     user_name: str = ""
-    client_uid: str = rx.Cookie(name="client_uid")
+    client_uid: str = rx.LocalStorage(name="client_uid")
 
     def get_client_uid(self) -> str:
-        print(self.client_uid)
         if not self.client_uid:
             self.client_uid = str(uuid.uuid4())
         return self.client_uid

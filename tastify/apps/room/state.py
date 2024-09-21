@@ -8,10 +8,11 @@ from PIL.Image import Image
 from tastify.apps.common.state import CommonState
 from tastify.apps.room.utils import generate_room_code
 from tastify.apps.router import Router
+from tastify.apps.spotify.state import logger
 from tastify.core.qrcode_utils import make_qrcode
 from tastify import db
 
-COUNT_REQUIRED_PLAYERS = 2
+COUNT_REQUIRED_PLAYERS = 1
 
 
 class RoomState(rx.State):
@@ -20,11 +21,18 @@ class RoomState(rx.State):
     room_qrcode: Image = None
     users_in_room: list[db.UserRoom] = []
     is_enough_players: bool = False
-    _n_tasks: int = 0
+    is_dashboard: bool = False
+    game: db.Game = None
 
-    def load_room(self):
+    # TODO: move into common or elsewhere
+    @rx.var
+    def room_code(self) -> str | None:
+        return self.router.page.params.get("room_code", None)
+
+    async def load_room(self):
         """Load a room."""
-        print("loading state")
+        logger.info(f"Loading room {self.room_code}")
+        common = await self.get_state(CommonState)
         with rx.session() as session:
             self.room = session.exec(select(db.Room).where(db.Room.code == self.room_code)).first()
             self.users_in_room = list(session.exec(
@@ -33,40 +41,30 @@ class RoomState(rx.State):
             self.is_enough_players = len(self.users_in_room) >= COUNT_REQUIRED_PLAYERS
             self.room_qrcode = make_qrcode(Router.join_link(self.room_code)).get_image()
             self.room_link = Router.join_link(self.room_code)
+            self.game = session.exec(select(db.Game).order_by(db.Game.created_at).where(
+                db.Game.room_id == self.room.id,
+            )).first()
+            self.is_dashboard = not any(user for user in self.users_in_room if user.user_uid == common.get_client_uid())
 
-    @rx.background
     async def refresh_room(self):
-        print(f"Refreshing state for {self.__class__.__name__}")
-        # TODO: limit this task
-        async with self:
-            # The latest state values are always available inside the context
-            if self._n_tasks > 0:
-                # only allow 1 concurrent task
-                return
+        logger.info(f"Refreshing state for {self.__class__.__name__}")
+        if self.router.page.path != Router.ROOM_PATH:
+            logger.info(f"Not in room {self.room_code}")
+            return
+        await self.load_room()
+        if self.game:
+            yield Router.to_game(self.room.code)
+            return
 
-            # State mutation is only allowed inside context block
-            self._n_tasks += 1
-
-        while True:
-            async with self:
-                if self.router.page.path != Router.ROOM_PATH:
-                    print("Not in room page")
-                    return
-                self.load_room()
-
-            # Await long operations outside the context to avoid blocking UI
-            await asyncio.sleep(2)
-
-    @rx.var
-    def room_code(self) -> str | None:
-        return self.router.page.params.get("room_code", None)
+        await asyncio.sleep(1)
+        yield RoomState.refresh_room
 
     def join_room_redirect(self):
         return Router.to_join_room(self.room_code)
 
-    def start_game(self):
+    async def start_game(self):
         """Start a game."""
-        self.load_room()
+        await self.load_room()
         with rx.session() as session:
             if not self.is_enough_players:
                 return rx.toast.error("Not enough players")
@@ -77,7 +75,12 @@ class RoomState(rx.State):
             if game:
                 return Router.to_game(self.room.code)
 
-            game = db.Game(room_id=self.room.id, state=db.GameState.NEW)
+            common = await self.get_state(CommonState)
+            game = db.Game(
+                room_id=self.room.id,
+                state=db.GameState.NEW,
+                created_by=common.get_client_uid()
+            )
             session.add(game)
             session.flush()
 

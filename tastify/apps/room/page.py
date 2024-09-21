@@ -18,10 +18,14 @@ def room() -> rx.Component:
         ),
         rx.spacer(),
         rx.hstack(
-            rx.button(
-                "Start game",
-                on_click=RoomState.start_game,
-                disabled=~RoomState.is_enough_players,
+            rx.cond(
+                RoomState.is_dashboard,
+                rx.button(
+                    "Start game",
+                    on_click=RoomState.start_game,
+                    disabled=~RoomState.is_enough_players,
+                ),
+                rx.spacer(),
             ),
             rx.image(src=RoomState.room_qrcode, width="100%"),
             rx.button(

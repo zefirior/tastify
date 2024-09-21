@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import reflex as rx
 from sqlmodel import select
@@ -7,6 +8,8 @@ from tastify.apps.common.state import CommonState
 from tastify.apps.router import Router
 from tastify.core.integration.spotify.client import SpotifyClient, UserTokenData, UserTrack
 from tastify import db
+
+logger = logging.getLogger(__name__)
 
 
 class SpotifyState(rx.State):
@@ -21,7 +24,7 @@ class SpotifyState(rx.State):
     async def register(self):
         """Register with Spotify."""
 
-        print("register")
+        logger.info('Registering with Spotify')
         client = SpotifyClient()
         code: str = self.router.page.params.get("code", None)
         user_uid = self.router.page.params.get("state", None)
@@ -45,7 +48,6 @@ class SpotifyState(rx.State):
             yield
 
             user_token_data = client.get_user_token(code=code)
-            print(user_token_data)
             self.state = connector.state = db.SpotifyConnectorState.SYNC_DATA
             connector.scope = user_token_data.scope
             connector.access_token = user_token_data.access_token
@@ -53,9 +55,6 @@ class SpotifyState(rx.State):
             connector.refresh_token = user_token_data.refresh_token
             session.commit()
 
-            yield
-            await asyncio.sleep(1)
-            print('redirecting to home')
             yield Router.to_home()
 
 
@@ -82,13 +81,12 @@ class SpotifyListUserTracksState(rx.State):
         common = await self.get_state(CommonState)
         with rx.session() as session:
             connector = get_or_create_connector(session, common.get_client_uid())
-            print(connector)
             if connector.is_expired():
                 self.state = db.SpotifyConnectorState.DISCONNECTED
                 return
         self.tracks = client.get_user_tracks(to_user_token_data(connector))
         self.state = connector.state
-        print(f'Loaded {len(self.tracks)} tracks')
+        logger.info(f'Loaded {len(self.tracks)} tracks for {common.get_client_uid()}')
 
 
 def to_user_token_data(connector: db.SpotifyConnector) -> UserTokenData:

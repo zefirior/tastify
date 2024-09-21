@@ -1,6 +1,7 @@
 import reflex as rx
 
 from tastify.apps.game.state import GameState
+from tastify.apps.game.view.root_renderer import RootRenderer
 from tastify.apps.router import Router
 
 
@@ -27,6 +28,8 @@ def game() -> rx.Component:
             ),
             width="100%",
         ),
+        rx.spacer(),
+        RootRenderer().render(),
         width="100%",
         spacing="6",
         padding_x=["1.5em", "1.5em", "3em"],

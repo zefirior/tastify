@@ -1,6 +1,9 @@
 import reflex as rx
 
 from tastify.apps import index
+from tastify.core.log import configure_logging
+
+configure_logging()
 
 app = rx.App(
     theme=rx.theme(

@@ -154,7 +154,6 @@ class SpotifyClient:
         if response.status_code != 200:
             logger.error(response.text)
             response.raise_for_status()
-        print(response.json()['items'][17])
         return [item.track for item in UserTracks(**response.json()).items]
 
     def build_authorize_url(self, state: str = None):
@@ -248,7 +247,6 @@ class SpotifyClient:
             response.raise_for_status()
         token_data = response.json()
 
-        print(token_data)
         return UserTokenData(
             access_token=token_data['access_token'],
             token_type=token_data['token_type'],
