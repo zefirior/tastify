@@ -1,11 +1,11 @@
 import reflex as rx
 
 from tastify import db
-from tastify.apps.game.state import GameState
-from tastify.apps.game.view.child import ChildRenderer
-from tastify.apps.game.view.dashboard import DashboardRenderer
-from tastify.apps.game.view.guesser import GuesserRenderer
-from tastify.apps.game.view.proposer import ProposerRenderer
+from tastify.domain.game.state import GameState
+from tastify.domain.game.view.child import ChildRenderer
+from tastify.domain.game.view.dashboard import DashboardRenderer
+from tastify.domain.game.view.guesser import GuesserRenderer
+from tastify.domain.game.view.proposer import ProposerRenderer
 
 
 class RootRenderer:

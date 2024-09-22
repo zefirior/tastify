@@ -6,8 +6,8 @@ import sqlmodel
 from sqlmodel import select
 
 from tastify import db
-from tastify.apps.common.state import CommonState
-from tastify.apps.router import Router
+from tastify.domain.common.state import CommonState
+from tastify.domain.router import Router
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class GameState(rx.State):
         ).all())
 
     def _fetch_game(self, session: sqlmodel.Session) -> db.Game:
-        return session.exec(
+        game = session.exec(
             select(db.Game).join(
                 db.Room, db.Room.id == db.Game.room_id,
             ).order_by(
@@ -105,6 +105,9 @@ class GameState(rx.State):
                 db.Room.code == self.room_code,
             )
         ).first()
+        if not game:
+            raise ValueError("Game not found")
+        return game
 
     def get_current_player(self):
         current_player_index = self.game.round % len(self.players)
@@ -119,6 +122,7 @@ class GameState(rx.State):
             # TODO: resolve data race
             game = self._fetch_game(session)
             if not game:
+                # TODO: handle errors in middleware
                 raise ValueError("Game not found")
             game.state = TRANSITION_MAP[game.state]
             session.add(game)

@@ -1,11 +1,12 @@
 import reflex as rx
 
-from tastify.apps.router import Router
-from tastify.apps.spotify.state import SpotifyState
+from tastify.domain.page import page
+from tastify.domain.router import Router
+from tastify.domain.spotify.state import SpotifyState
 from tastify import db
 
 
-@rx.page(route=Router.REGISTER_SPOTIFY_PATH, on_load=SpotifyState.register)
+@page(route=Router.REGISTER_SPOTIFY_PATH, on_load=SpotifyState.register)
 def registration() -> rx.Component:
     return rx.vstack(
         rx.cond(

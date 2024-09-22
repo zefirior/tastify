@@ -1,11 +1,12 @@
 import reflex as rx
 
-from tastify.apps.game.state import GameState
-from tastify.apps.game.view.root_renderer import RootRenderer
-from tastify.apps.router import Router
+from tastify.domain.game.state import GameState
+from tastify.domain.game.view.root_renderer import RootRenderer
+from tastify.domain.page import page
+from tastify.domain.router import Router
 
 
-@rx.page(route=Router.GAME_PATH, on_load=GameState.refresh_game)
+@page(route=Router.GAME_PATH, on_load=GameState.refresh_game)
 def game() -> rx.Component:
     return rx.vstack(
         rx.table.root(

@@ -5,10 +5,10 @@ import reflex as rx
 from sqlmodel import select
 from PIL.Image import Image
 
-from tastify.apps.common.state import CommonState
-from tastify.apps.room.utils import generate_room_code
-from tastify.apps.router import Router
-from tastify.apps.spotify.state import logger
+from tastify.domain.common.state import CommonState
+from tastify.domain.room.utils import generate_room_code
+from tastify.domain.router import Router
+from tastify.domain.spotify.state import logger
 from tastify.core.qrcode_utils import make_qrcode
 from tastify import db
 
@@ -47,7 +47,6 @@ class RoomState(rx.State):
             self.is_dashboard = not any(user for user in self.users_in_room if user.user_uid == common.get_client_uid())
 
     async def refresh_room(self):
-        logger.info(f"Refreshing state for {self.__class__.__name__}")
         if self.router.page.path != Router.ROOM_PATH:
             logger.info(f"Not in room {self.room_code}")
             return

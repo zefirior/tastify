@@ -1,11 +1,13 @@
 import reflex as rx
 
 from tastify import db
-from tastify.apps.room.state import JoinRoomState, CreateRoomState
-from tastify.apps.spotify.state import SpotifyState, SpotifyListUserTracksState
+from tastify.domain.page import page
+from tastify.domain.room.state import JoinRoomState, CreateRoomState
+from tastify.domain.spotify.state import SpotifyState, SpotifyListUserTracksState
 from tastify.core.integration.spotify.client import UserTrack
 
 
+@page(title="Tastify", description="Game for exploring friend's music tastes")
 def index() -> rx.Component:
     return rx.vstack(
         rx.button("Create room", on_click=CreateRoomState.create_room),

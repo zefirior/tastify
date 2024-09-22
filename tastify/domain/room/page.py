@@ -1,10 +1,11 @@
 import reflex as rx
 
-from tastify.apps.room.state import RoomState, JoinRoomState
-from tastify.apps.router import Router
+from tastify.domain.page import page
+from tastify.domain.room.state import RoomState, JoinRoomState
+from tastify.domain.router import Router
 
 
-@rx.page(route=Router.ROOM_PATH, on_load=RoomState.refresh_room)
+@page(route=Router.ROOM_PATH, on_load=RoomState.refresh_room)
 def room() -> rx.Component:
     return rx.vstack(
         rx.badge(
@@ -61,7 +62,7 @@ def room() -> rx.Component:
     )
 
 
-@rx.page(route=Router.JOIN_ROOM_PATH)
+@page(route=Router.JOIN_ROOM_PATH)
 def join() -> rx.Component:
     return rx.vstack(
         rx.badge(

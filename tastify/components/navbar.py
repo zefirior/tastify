@@ -5,7 +5,7 @@ def navbar():
     return rx.flex(
         rx.badge(
             rx.icon(tag="table-2", size=28),
-            rx.heading("Customer Data App", size="6"),
+            rx.heading("Tastify App", size="6"),
             color_scheme="green",
             radius="large",
             align="center",
@@ -14,8 +14,8 @@ def navbar():
         ),
         rx.spacer(),
         rx.hstack(
-            rx.logo(),
             rx.color_mode.button(),
+            rx.link(rx.button("Home"), href="/"),
             align="center",
             spacing="3",
         ),

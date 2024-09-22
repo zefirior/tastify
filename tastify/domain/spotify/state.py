@@ -4,8 +4,8 @@ import logging
 import reflex as rx
 from sqlmodel import select
 
-from tastify.apps.common.state import CommonState
-from tastify.apps.router import Router
+from tastify.domain.common.state import CommonState
+from tastify.domain.router import Router
 from tastify.core.integration.spotify.client import SpotifyClient, UserTokenData, UserTrack
 from tastify import db
 

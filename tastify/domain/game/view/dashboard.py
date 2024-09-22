@@ -1,11 +1,11 @@
 import reflex as rx
 
 from tastify import db
-from tastify.apps.game.state import TRANSITION_MAP, GameState
-from tastify.apps.game.view.child import ChildRenderer
+from tastify.domain.game.state import TRANSITION_MAP, GameState
+from tastify.domain.game.view.child import ChildRenderer
 
 
-class GuesserRenderer(ChildRenderer):
+class DashboardRenderer(ChildRenderer):
     def render_new(self) -> rx.Component:
         return _render(db.GameState.NEW)
 
@@ -25,6 +25,6 @@ class GuesserRenderer(ChildRenderer):
 def _render(state: db.GameState) -> rx.Component:
     next_state = TRANSITION_MAP[state]
     return rx.vstack(
-        rx.heading(f"Guesser on state {state}"),
+        rx.heading(f"Dashboard on state {state}"),
         rx.button(f"To {next_state}", on_click=GameState.move_game_state),
     )
