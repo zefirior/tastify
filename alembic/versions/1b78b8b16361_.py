@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 1585b1e582ce
+Revision ID: 1b78b8b16361
 Revises: 
-Create Date: 2024-09-11 00:58:14.424656
+Create Date: 2024-09-23 02:28:34.929208
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 import sqlmodel
 
 # revision identifiers, used by Alembic.
-revision: str = '1585b1e582ce'
+revision: str = '1b78b8b16361'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -34,10 +34,11 @@ def upgrade() -> None:
     op.create_table('game',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('room_id', sa.Integer(), nullable=False),
-    sa.Column('state', sa.Enum('NEW', 'PREPARING', 'SUGGEST_GROUP', 'ADD_LIKES', 'RESULTS', name='gamestate'), nullable=False),
+    sa.Column('state', sa.Enum('NEW', 'PREPARING', 'PROPOSE', 'GUESS', 'RESULTS', name='gamestate'), nullable=False),
     sa.Column('round', sa.Integer(), nullable=False),
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('data', sa.JSON(), nullable=False),
     sa.ForeignKeyConstraint(['created_by'], ['user.uid'], ),
     sa.ForeignKeyConstraint(['room_id'], ['room.id'], ),
     sa.PrimaryKeyConstraint('id')

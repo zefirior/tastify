@@ -1,8 +1,11 @@
 import enum
 from datetime import datetime
+from typing import Any
 
 import reflex as rx
 import sqlmodel
+
+from sqlalchemy import JSON
 
 from tastify.core.time_utils import get_datetime_column
 
@@ -21,6 +24,10 @@ class Game(rx.Model, table=True):
     round: int = 0
     created_by: str = sqlmodel.Field(foreign_key="user.uid")
     created_at: datetime = get_datetime_column()
+    data: dict[str, Any] = sqlmodel.Field(
+        default={},
+        sa_type=JSON,
+    )
 
 
 class UserGame(rx.Model, table=True):

@@ -2,7 +2,7 @@ import reflex as rx
 
 from tastify import db
 from tastify.domain.game.state import TRANSITION_MAP, GameState
-from tastify.domain.game.view.child import ChildRenderer
+from tastify.domain.game.view.child import ChildRenderer, _render_guess
 
 
 class DashboardRenderer(ChildRenderer):
@@ -16,7 +16,7 @@ class DashboardRenderer(ChildRenderer):
         return _render(db.GameState.PROPOSE)
 
     def render_guess(self) -> rx.Component:
-        return _render(db.GameState.GUESS)
+        return _render_guess("Dashboard")
 
     def render_result(self) -> rx.Component:
         return _render(db.GameState.RESULTS)

@@ -1,4 +1,5 @@
 import base64
+import datetime
 import json
 import logging
 import pathlib
@@ -6,12 +7,14 @@ import random
 import string
 import time
 import webbrowser
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 from functools import lru_cache
 from pydantic.dataclasses import dataclass
 
 import requests
-from reflex import serializer
+
+from tastify.core.integration.spotify.models.search import SearchResponse
+from tastify.core.integration.spotify.models.user_tracks import UserTracks
 
 HOME = pathlib.Path.home()
 SPOTIFY_TOKEN_PATH = HOME / '.tastify' / 'token'
@@ -27,10 +30,10 @@ logger = logging.getLogger(__name__)
 class TokenData:
     access_token: str
     token_type: str
-    expires_at: datetime
+    expires_at: datetime.datetime
 
     def is_expired(self):
-        return self.expires_at < time.time()
+        return self.expires_at < datetime.datetime.now(datetime.UTC)
 
 
 @dataclass
@@ -39,99 +42,10 @@ class UserTokenData:
     token_type: str
     scope: str
     refresh_token: str
-    expires_at: datetime
+    expires_at: datetime.datetime
 
     def is_expired(self):
-        return self.expires_at < datetime.now(tz=timezone.utc)
-
-
-@dataclass
-class Artist:
-    id: str
-    name: str
-
-
-@serializer
-def artist_to_dict(self: Artist):
-    return {
-        'id': self.id,
-        'name': self.name,
-    }
-
-
-@dataclass
-class AlbumImage:
-    url: str
-    height: int
-    width: int
-
-
-@serializer
-def image_to_dict(self: AlbumImage):
-    return {
-        'url': self.url,
-        'height': self.height,
-        'width': self.width,
-    }
-
-
-@dataclass
-class Album:
-    id: str
-    name: str
-    images: list[AlbumImage]
-
-    def get_smallest_image(self):
-        return min(self.images, key=lambda x: x.height)
-
-
-@serializer
-def album_to_dict(self: Album):
-    return {
-        'id': self.id,
-        'name': self.name,
-        'images': [image_to_dict(i) for i in self.images],
-    }
-
-
-@dataclass
-class UserTrack:
-    # TODO: separate into model and domain
-    id: str
-    name: str
-    popularity: int
-    preview_url: str | None
-    album: Album
-    artists: list[Artist]
-
-    def get_artists(self):
-        # TODO: fix using foreach
-        return ' feat '.join(*[a.name for a in self.artists])
-
-
-@serializer
-def track_to_dict(self: UserTrack):
-    return {
-        'id': self.id,
-        'name': self.name,
-        'popularity': self.popularity,
-        'preview_url': self.preview_url,
-        'album': album_to_dict(self.album),
-        'artists': [artist_to_dict(a) for a in self.artists],
-    }
-
-
-@dataclass
-class UserTrackItem:
-    track: UserTrack
-
-
-@dataclass
-class UserTracks:
-    next: str
-    offset: int
-    total: int
-    items: list[UserTrackItem]
+        return self.expires_at < datetime.datetime.now(tz=datetime.UTC)
 
 
 def generate_random_string(length: int) -> str:
@@ -144,16 +58,20 @@ class SpotifyClient:
     REGISTER_CALLBACK = '/register-spotify/'
     REDIRECT_URL = f'http://tastify.zefirior.com{REGISTER_CALLBACK}'
 
-    def get_user_tracks(self, token_data: UserTokenData):
-        response = requests.get(
-            f'{SPOTIFY_API_HOST}/me/tracks',
-            headers={
-                'Authorization': f'{token_data.token_type} {token_data.access_token}',
-            }
+    def search_artists(self, query: str, limit: int = 10):
+        response = self._client_request(
+            '/search',
+            params={
+                'q': query,
+                'type': 'artist',
+                'limit': limit,
+            },
         )
-        if response.status_code != 200:
-            logger.error(response.text)
-            response.raise_for_status()
+        return SearchResponse(**response.json())
+
+
+    def get_user_tracks(self, token_data: UserTokenData):
+        response = self._client_request('/me/tracks', token=token_data)
         return [item.track for item in UserTracks(**response.json()).items]
 
     def build_authorize_url(self, state: str = None):
@@ -174,56 +92,9 @@ class SpotifyClient:
         )
         return r.prepare().url
 
-    def authorize(self):
-        """
-        Authorize the app to access the user's Spotify account.
-        link: https://developer.spotify.com/documentation/web-api/tutorials/code-flow
-        """
-        state = generate_random_string(16)
-        client_data = self._get_client_data()
-
-        logger.info(f'SpotifyClient.authorize with {state}')
-        response = requests.get(
-            f'{SPOTIFY_HOST}/authorize',
-            params={
-                'client_id': client_data['client_id'],
-                'response_type': 'code',
-                'redirect_uri': self.REDIRECT_URL,
-                'state': state,
-                'scope': self.PERMISSION_SCOPE,
-            }
-        )
-        logger.info(f'SpotifyClient.authorize request: {response.url}')
-        response.raise_for_status()
-        return response.text
-
     def open_authorize_url(self):
         authorize_url = self.build_authorize_url()
         webbrowser.open_new_tab(authorize_url)
-
-    def get_token(self, token_data: TokenData) -> TokenData:
-        logger.info('SpotifyClient.get_internal_token')
-
-        if not SPOTIFY_USER_TOKEN_PATH.exists():
-            self._refresh_token()
-        token_data = self._read_token()
-        if token_data.is_expired():
-            self._refresh_token()
-            return self._read_token()
-        else:
-            return token_data
-
-    def get_token_with_refresh(self, ) -> TokenData:
-        logger.info('SpotifyClient.get_internal_token')
-
-        if not SPOTIFY_USER_TOKEN_PATH.exists():
-            self._refresh_token()
-        token_data = self._read_token()
-        if token_data.is_expired():
-            self._refresh_token()
-            return self._read_token()
-        else:
-            return token_data
 
     def get_user_token(self, code: str) -> UserTokenData:
         client_data = self._get_client_data()
@@ -251,7 +122,7 @@ class SpotifyClient:
             access_token=token_data['access_token'],
             token_type=token_data['token_type'],
             scope=token_data['scope'],
-            expires_at=datetime.now(tz=timezone.utc) + timedelta(seconds=token_data['expires_in']),
+            expires_at=datetime.datetime.now(tz=datetime.UTC) + timedelta(seconds=token_data['expires_in']),
             refresh_token=token_data['refresh_token'],
         )
 
@@ -267,14 +138,40 @@ class SpotifyClient:
         else:
             return token_data
 
-    def _read_token(self) -> TokenData:
+    def _client_request(self, route: str, method: str = 'GET', token = None,  **kwargs):
+        token = token or self.get_internal_token()
+        logger.info(f'calling {method} {route} with params {kwargs}')
+        response = requests.request(
+            method,
+            f'{SPOTIFY_API_HOST}{route}',
+            headers={
+                'Authorization': f'{token.token_type} {token.access_token}',
+            },
+            **kwargs,
+        )
+        if response.status_code != 200:
+            logger.error(response.text)
+            response.raise_for_status()
+        return response
+
+    @staticmethod
+    def _read_token() -> TokenData:
         with open(SPOTIFY_TOKEN_PATH) as f:
-            return TokenData(**json.load(f))
+            data = json.load(f)
+            return TokenData(
+                access_token=data['access_token'],
+                token_type=data['token_type'],
+                expires_at=datetime.datetime.fromisoformat(data['expires_at']),
+            )
 
     def _refresh_token(self):
         token_data = self._get_token()
         with open(SPOTIFY_TOKEN_PATH, 'w') as f:
-            json.dump(dataclasses.asdict(token_data), f)
+            json.dump(dict(
+                access_token=token_data.access_token,
+                token_type=token_data.token_type,
+                expires_at=token_data.expires_at.isoformat(),
+            ), f)
         logger.info('Spotify token refreshed')
 
     def _get_token(self) -> TokenData:
