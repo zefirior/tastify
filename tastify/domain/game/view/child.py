@@ -33,6 +33,6 @@ def _render_guess(who: str) -> rx.Component:
     next_state = TRANSITION_MAP[state]
     return rx.vstack(
         rx.heading(f"{who} on state {state}"),
-        rx.heading(f"Proposed artist: {GameState.artist}"),
+        rx.heading(f"Proposed artist: {GameState.round.artist}"),
         rx.button(f"To {next_state}", on_click=GameState.move_game_state),
     )

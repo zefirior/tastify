@@ -19,7 +19,7 @@ class RootRenderer:
             GameState.is_dashboard,
             self.render_child(self.dashboard),
             rx.cond(
-                GameState.is_current_player,
+                GameState.is_my_turn,
                 self.render_child(self.proposer),
                 self.render_child(self.guesser),
             ),

@@ -69,6 +69,16 @@ class SpotifyClient:
         )
         return SearchResponse(**response.json())
 
+    def search_artist_tracks(self, query: str, artist_name: str, limit: int = 10):
+        response = self._client_request(
+            '/search',
+            params={
+                'q': query + f' artist:"{artist_name}"',
+                'type': 'track',
+                'limit': limit,
+            },
+        )
+        return SearchResponse(**response.json())
 
     def get_user_tracks(self, token_data: UserTokenData):
         response = self._client_request('/me/tracks', token=token_data)

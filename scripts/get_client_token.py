@@ -12,4 +12,4 @@ configure_logging()
 
 if __name__ == '__main__':
     spotify_client = SpotifyClient()
-    print(spotify_client.get_internal_token())
+    print(spotify_client.get_internal_token().access_token)

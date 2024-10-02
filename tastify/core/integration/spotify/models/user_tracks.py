@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-
+from pydantic.dataclasses import dataclass
 from reflex import serializer
 
 from tastify.core.integration.spotify.models.common import Image, image_to_dict

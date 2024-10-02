@@ -1,10 +1,10 @@
 import reflex as rx
 
 from tastify import db
+from tastify.core.integration.spotify.models.user_tracks import UserTrack
 from tastify.domain.page import page
 from tastify.domain.room.state import JoinRoomState, CreateRoomState
 from tastify.domain.spotify.state import SpotifyState, SpotifyListUserTracksState
-from tastify.core.integration.spotify.client import UserTrack
 
 
 @page(title="Tastify", description="Game for exploring friend's music tastes")
