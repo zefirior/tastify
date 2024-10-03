@@ -1,8 +1,10 @@
 import asyncio
 import logging
+from contextlib import contextmanager
 
 import reflex as rx
 import sqlmodel
+from docutils.nodes import image
 from sqlmodel import select
 
 from tastify import db
@@ -39,7 +41,7 @@ class UserGameDto(rx.Base):
 class ArtistDto(rx.Base):
     id: str
     name: str
-    image_url: str
+    image_url: str | None = None
     genres: list[str]
 
 
@@ -80,7 +82,7 @@ class GameState(rx.State):
     game_state: db.GameState = db.GameState.NEW
     my_user_uid: str = None
     players: list[UserGameDto] = []
-    is_my_turn: bool = False
+    is_proposer: bool = False
     is_dashboard: bool = False  # TODO: explicitly switch to dashboard
     round: RoundDto = None
 
@@ -107,10 +109,10 @@ class GameState(rx.State):
             common = await self.get_state(CommonState)
             self.my_user_uid = common.get_client_uid()
             player = filter_player(self.my_user_uid, self.players)
-            current_proposer = self.get_current_proposer()
-            self.is_my_turn = player == current_proposer
+            current_proposer = game_service.get_current_proposer(self.game.round, self.players)
+            self.is_proposer = player == current_proposer
             self.is_dashboard = self.my_user_uid == self.game.created_by
-            current_round_data = db_game.get_data().get("rounds", {}).get(str(self.game.round), {})
+            current_round_data = db_game.data.get("rounds", {}).get(str(self.game.round), {})
             my_player_data = current_round_data.get("players", {}).get(self.my_user_uid, {})
             self.round = RoundDto(
                 round=db_game.round,
@@ -118,85 +120,91 @@ class GameState(rx.State):
                 track=my_player_data.get("track", {}).get("name", ""),
             )
 
-    def get_current_proposer(self):
-        current_player_index = self.game.round % len(self.players)
-        return sorted(
-            self.players,
-            key=lambda player: player.user_uid,
-        )[current_player_index]
-
     def move_game_state(self):
         logger.info(f"Moving game state from {self.game_state} to {TRANSITION_MAP[self.game_state]}")
-        with rx.session() as session:
-            # TODO: resolve data race
-            game = game_service.get_game(session, self.room_code)
-            if not game:
-                # TODO: handle errors in middleware
-                raise ValueError("Game not found")
+        with self.modify_game() as (_, game):
             game.state = TRANSITION_MAP[game.state]
-            session.add(game)
-            session.commit()
 
-    async def guesser_skip_round(self):
-        logger.info("dont_like_artist()")
-        await self.load_state()
-        if self.is_my_turn:
-            logger.info("Current player don't guess")
-            return
-        if self.game_state != db.GameState.GUESS:
-            logger.info("Not in guess state")
-            return
-
-        common = await self.get_state(CommonState)
-        with rx.session() as session:
-            # TODO: resolve data race
-            game = game_service.guesser_skip_round(session, self.room_code, common.get_client_uid())
+    def finalize_round(self):
+        with self.modify_game() as (_, game):
+            logger.info(f"Finalizing round {game.round} for game {game.id}")
+            game.round += 1
             game.state = TRANSITION_MAP[game.state]
-            session.add(game)
-            session.commit()
 
     async def select_artist(self, artist):
         logger.info(f"Selected artist {artist['name']}")
         await self.load_state()
-        if not self.is_my_turn:
-            logger.info("Not the current player")
-            return
-        if self.game_state != db.GameState.PROPOSE:
-            logger.info("Not in PROPOSE state")
-            return
+        self.validate_is_proposer()
+        self.validate_state(db.GameState.PROPOSE)
 
-        with rx.session() as session:
-            # TODO: resolve data race
-            game = game_service.get_game(session, self.room_code)
+        with self.modify_game() as (_, game):
             data = dict(game.data or {})
             rounds_data = data.setdefault("rounds", {})
             current_round_data = rounds_data.setdefault(self.round.round, {})
             current_round_data["artist"] = artist
             game.data = data
             game.state = TRANSITION_MAP[game.state]
-            session.add(game)
-            session.commit()
+
+    async def guesser_skip_round(self):
+        logger.info("dont_like_artist()")
+        await self.load_state()
+        self.validate_is_guesser()
+        self.validate_state(db.GameState.GUESS)
+
+        with self.modify_game() as (session, game):
+            data = game.data.copy()
+            rounds_data = data.setdefault("rounds", {})
+            current_round_data = rounds_data.setdefault(str(self.round.round), {}) # TODO: model
+            current_round_player_data = current_round_data.setdefault("players", {})
+            current_round_player_data[self.my_user_uid] = {"skipped": True}
+            game.data = data
+            if len(current_round_player_data) == len(self.players) - 1: # minus proposer
+                game_service.calculate_scores(session, game, self.round.round)
+                game.state = TRANSITION_MAP[game.state]
+
 
     async def select_track(self, track):
         logger.info(f"Selected track {track['name']}")
         await self.load_state()
-        if self.game_state != db.GameState.GUESS:
-            logger.info("Not in GUESS state")
-            return
+        self.validate_is_guesser()
+        self.validate_state(db.GameState.GUESS)
 
-        with rx.session() as session:
-            # TODO: resolve data race
-            game = game_service.get_game(session, self.room_code)
-            data = dict(game.data or {})
+        with self.modify_game() as (session, game):
+            data = game.data.copy()
             rounds_data = data.setdefault("rounds", {})
-            current_round_data = rounds_data.setdefault(self.round.round, {})
+            current_round_data = rounds_data.setdefault(str(self.round.round), {}) # TODO: model
             current_round_player_data = current_round_data.setdefault("players", {})
             current_round_player_data[self.my_user_uid] = {"track": track}
             game.data = data
             if len(current_round_player_data) == len(self.players) - 1: # minus proposer
+                game_service.calculate_scores(session, game, self.round.round)
                 game.state = TRANSITION_MAP[game.state]
+
+    @contextmanager
+    def modify_game(self) -> tuple[sqlmodel.Session, db.Game]:
+        with rx.session() as session:
+            # TODO: resolve data race
+            game = game_service.get_game(session, self.room_code)
+            if not game:
+                # TODO: handle errors in middleware
+                raise ValueError("Game not found")
+            yield session, game
             session.add(game)
             session.commit()
+
+    def validate_is_proposer(self):
+        if not self.is_proposer:
+            logger.info("This action is only for proposer")
+            return
+
+    def validate_is_guesser(self):
+        if self.is_proposer or self.is_dashboard:
+            logger.info("This action is only for guesser")
+            return
+
+    def validate_state(self, state):
+        if self.game_state != state:
+            raise ValueError(f"Not in {state} state")
 
 
 class SearchArtistState(rx.State):
@@ -214,10 +222,11 @@ class SearchArtistState(rx.State):
         items = client.search_artists(query).artists.items
         artists = []
         for item in items:
+            image = smallest_image(item.images)
             artist = ArtistDto(
                 id=item.id,
                 name=item.name,
-                image_url=smallest_image(item.images).url,
+                image_url=image.url if image else None,
                 genres=item.genres,
             )
             artists.append(artist)
@@ -235,11 +244,13 @@ class SearchArtistTracksState(rx.State):
 
         # TODO: rx.background
         client = SpotifyClient()
-        self.tracks = [
-            TrackDto(
-                id=track.id,
-                name=track.name,
-                album_image_url=smallest_image(track.album.images).url,
-                preview_url=track.preview_url,
-            ) for track in client.search_artist_tracks(query, artist_name).tracks.items
-        ]
+        self.tracks = []
+        for item in client.search_artist_tracks(query, artist_name).tracks.items:
+            image = smallest_image(item.album.images)
+            track = TrackDto(
+                id=item.id,
+                name=item.name,
+                album_image_url=image.url if image else None,
+                preview_url=item.preview_url,
+            )
+            self.tracks.append(track)

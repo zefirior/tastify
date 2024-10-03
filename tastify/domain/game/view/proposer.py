@@ -2,10 +2,14 @@ import reflex as rx
 
 from tastify import db
 from tastify.domain.game.state import TRANSITION_MAP, GameState, SearchArtistState, ArtistDto
-from tastify.domain.game.view.child import ChildRenderer, _render_guess
+from tastify.domain.game.view.child import ChildRenderer, _render_guess, _render_result
 
 
 class ProposerRenderer(ChildRenderer):
+    @property
+    def who(self) -> str:
+        return "Proposer"
+
     def render_new(self) -> rx.Component:
         return _render(db.GameState.NEW)
 
@@ -17,9 +21,6 @@ class ProposerRenderer(ChildRenderer):
 
     def render_guess(self) -> rx.Component:
         return _render_guess("Proposer")
-
-    def render_result(self) -> rx.Component:
-        return _render(db.GameState.RESULTS)
 
 
 def _render(state: db.GameState) -> rx.Component:
@@ -37,7 +38,7 @@ def search_artist():
                 rx.input.slot(
                     rx.icon(tag="search"),
                 ),
-                placeholder="Search songs...",
+                placeholder="Search artist...",
                 on_change=SearchArtistState.search,
             ),
             rx.flex(

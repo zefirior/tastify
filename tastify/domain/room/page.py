@@ -29,11 +29,7 @@ def room() -> rx.Component:
                 rx.spacer(),
             ),
             rx.image(src=RoomState.room_qrcode, width="100%"),
-            rx.button(
-                "Join room (DEV)",
-                on_click=RoomState.join_room_redirect,
-                color="green",
-            ),
+            rx.input(value=RoomState.room_link),
         ),
         rx.spacer(),
         rx.heading("Users in room", size="5"),

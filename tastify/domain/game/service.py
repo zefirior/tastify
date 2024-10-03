@@ -1,8 +1,15 @@
+from math import ceil
+
 import sqlmodel
 from sqlmodel import select
 
 from tastify import db
 from tastify.core.misc import filter_player
+
+GUESSER_SCORE_DIFF = 1
+PROPOSER_SCORE_DIFF_PER_GUESSER = 1
+PROPOSER_SCORE_DIFF = 1
+FAIL_PROPOSER_SCORE_DIFF = -1
 
 
 class GameService:
@@ -51,6 +58,38 @@ class GameService:
                 db.Game.id == db.UserGame.game_id
             ).where(db.Game.id == game_id)
         ).all())
+
+    def calculate_scores(self, session: sqlmodel.Session, game: db.Game, round: int):
+        data = game.data
+        rounds_data = data["rounds"][str(round)]
+
+        players = self.get_players(session, game.id)
+        proposer = self.get_current_proposer(game.round, players)
+        guessers = [player for player in players if player != proposer]
+
+        count_winners = 0
+        for guesser in guessers:
+            player_data = rounds_data["players"][guesser.user_uid]
+            if player_data.get("skipped", False):
+                continue
+            count_winners += 1
+            guesser.score += GUESSER_SCORE_DIFF
+
+        if count_winners == 0:
+            proposer.score += FAIL_PROPOSER_SCORE_DIFF
+        elif count_winners <= ceil(len(guessers) / 2):
+            proposer.score += (count_winners * PROPOSER_SCORE_DIFF_PER_GUESSER + PROPOSER_SCORE_DIFF)
+
+        session.add(proposer)
+        session.add_all(guessers)
+
+    @staticmethod
+    def get_current_proposer(round: int, players: list[db.UserGame]) -> db.UserGame:
+        current_player_index = round % len(players)
+        return sorted(
+            players,
+            key=lambda player: player.user_uid,
+        )[current_player_index]
 
 
 game_service = GameService()

@@ -1,7 +1,9 @@
 from tastify.core.integration.spotify.models.common import Image
 
 
-def smallest_image(images: list[Image]) -> Image:
+def smallest_image(images: list[Image]) -> Image | None:
+    if not images: # TODO: stub
+        return None
     return min(images, key=lambda image: image.height + image.width)
 
 

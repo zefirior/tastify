@@ -6,6 +6,10 @@ from tastify.domain.game.view.child import ChildRenderer, _render_guess
 
 
 class DashboardRenderer(ChildRenderer):
+    @property
+    def who(self) -> str:
+        return "Dashboard"
+
     def render_new(self) -> rx.Component:
         return _render(db.GameState.NEW)
 
@@ -17,9 +21,6 @@ class DashboardRenderer(ChildRenderer):
 
     def render_guess(self) -> rx.Component:
         return _render_guess("Dashboard")
-
-    def render_result(self) -> rx.Component:
-        return _render(db.GameState.RESULTS)
 
 
 def _render(state: db.GameState) -> rx.Component:

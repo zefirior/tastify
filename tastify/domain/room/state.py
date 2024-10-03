@@ -31,7 +31,6 @@ class RoomState(rx.State):
 
     async def load_room(self):
         """Load a room."""
-        logger.info(f"Loading room {self.room_code}")
         common = await self.get_state(CommonState)
         with rx.session() as session:
             self.room = session.exec(select(db.Room).where(db.Room.code == self.room_code)).first()

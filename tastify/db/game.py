@@ -76,16 +76,16 @@ class Game(rx.Model, table=True):
     round: int = 0
     created_by: str = sqlmodel.Field(foreign_key="user.uid")
     created_at: datetime = get_datetime_column()
-    data: GameDto = sqlmodel.Field(
+    data: dict = sqlmodel.Field(
         default={},
         sa_type=JSON,
     )
 
-    def get_data(self) -> GameDto:
-        return self.data
+    # def get_data(self) -> GameDto:
+    #     return self.data
 
-    def set_data(self, data):
-        self.data = data
+    # def set_data(self, data):
+    #     self.data = data
 
 
 class UserGame(rx.Model, table=True):
