@@ -4,7 +4,7 @@ import reflex as rx
 from sqlmodel import select
 
 from tastify.core.integration.spotify.models.user_tracks import UserTrack
-from tastify.domain.common.state import CommonState
+from tastify.domain.common.state import BaseState
 from tastify.domain.router import Router
 from tastify.core.integration.spotify.client import SpotifyClient, UserTokenData
 from tastify import db
@@ -12,14 +12,13 @@ from tastify import db
 logger = logging.getLogger(__name__)
 
 
-class SpotifyState(rx.State):
+class SpotifyState(BaseState):
     state: db.SpotifyConnectorState = db.SpotifyConnectorState.DISCONNECTED
 
     async def connect(self):
         """Connect to Spotify."""
         client = SpotifyClient()
-        common = await self.get_state(CommonState)
-        return rx.redirect(client.build_authorize_url(state=common.get_client_uid()))
+        return rx.redirect(client.build_authorize_url(state=self.get_client_uid()))
 
     async def register(self):
         """Register with Spotify."""
@@ -30,8 +29,7 @@ class SpotifyState(rx.State):
         user_uid = self.router.page.params.get("state", None)
         error = self.router.page.params.get("error", None)
 
-        common = await self.get_state(CommonState)
-        if user_uid != common.get_client_uid():
+        if user_uid != self.get_client_uid():
             raise ValueError("Invalid user")
 
         if not code:
@@ -43,7 +41,7 @@ class SpotifyState(rx.State):
         with rx.session() as session:
             connector = get_or_create_connector(
                 session=session,
-                user_uid=common.get_client_uid(),
+                user_uid=self.get_client_uid(),
             )
             yield
 
@@ -70,7 +68,7 @@ def get_or_create_connector(session, user_uid) -> db.SpotifyConnector:
     return connector
 
 
-class SpotifyListUserTracksState(rx.State):
+class SpotifyListUserTracksState(BaseState):
     state: db.SpotifyConnectorState = db.SpotifyConnectorState.DISCONNECTED
     show_tracks: bool = False
     tracks: list[UserTrack] = []
@@ -78,15 +76,14 @@ class SpotifyListUserTracksState(rx.State):
     async def load_tracks(self):
         """Load user's tracks."""
         client = SpotifyClient()
-        common = await self.get_state(CommonState)
         with rx.session() as session:
-            connector = get_or_create_connector(session, common.get_client_uid())
+            connector = get_or_create_connector(session, self.get_client_uid())
             if connector.is_expired():
                 self.state = db.SpotifyConnectorState.DISCONNECTED
                 return
         self.tracks = client.get_user_tracks(to_user_token_data(connector))
         self.state = connector.state
-        logger.info(f'Loaded {len(self.tracks)} tracks for {common.get_client_uid()}')
+        logger.info(f'Loaded {len(self.tracks)} tracks for {self.get_client_uid()}')
 
 
 def to_user_token_data(connector: db.SpotifyConnector) -> UserTokenData:

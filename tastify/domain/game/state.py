@@ -4,13 +4,11 @@ from contextlib import contextmanager
 
 import reflex as rx
 import sqlmodel
-from docutils.nodes import image
-from sqlmodel import select
 
 from tastify import db
 from tastify.core.integration.spotify.client import SpotifyClient
 from tastify.core.misc import smallest_image, filter_player
-from tastify.domain.common.state import CommonState
+from tastify.domain.common.state import BaseState
 from tastify.domain.game.service import game_service
 from tastify.domain.router import Router
 
@@ -77,7 +75,7 @@ class RoundDto(rx.Base):
     track: str
 
 
-class GameState(rx.State):
+class GameState(BaseState):
     game: GameDto = None
     game_state: db.GameState = db.GameState.NEW
     my_user_uid: str = None
@@ -106,8 +104,7 @@ class GameState(rx.State):
             self.game_state = self.game.state
             self.players = _map_players(game_service.get_players(session, db_game.id))
 
-            common = await self.get_state(CommonState)
-            self.my_user_uid = common.get_client_uid()
+            self.my_user_uid = self.get_client_uid()
             player = filter_player(self.my_user_uid, self.players)
             current_proposer = game_service.get_current_proposer(self.game.round, self.players)
             self.is_proposer = player == current_proposer
@@ -138,11 +135,12 @@ class GameState(rx.State):
         self.validate_state(db.GameState.PROPOSE)
 
         with self.modify_game() as (_, game):
-            data = dict(game.data or {})
+            data = dict(game.data.copy() or {})
             rounds_data = data.setdefault("rounds", {})
-            current_round_data = rounds_data.setdefault(self.round.round, {})
+            logger.info(f"Current round: {self.round.round}")
+            current_round_data = rounds_data.setdefault(str(self.round.round), {})
             current_round_data["artist"] = artist
-            game.data = data
+            game.data = data.copy()
             game.state = TRANSITION_MAP[game.state]
 
     async def guesser_skip_round(self):
@@ -157,7 +155,7 @@ class GameState(rx.State):
             current_round_data = rounds_data.setdefault(str(self.round.round), {}) # TODO: model
             current_round_player_data = current_round_data.setdefault("players", {})
             current_round_player_data[self.my_user_uid] = {"skipped": True}
-            game.data = data
+            game.data = data.copy()
             if len(current_round_player_data) == len(self.players) - 1: # minus proposer
                 game_service.calculate_scores(session, game, self.round.round)
                 game.state = TRANSITION_MAP[game.state]
@@ -175,7 +173,7 @@ class GameState(rx.State):
             current_round_data = rounds_data.setdefault(str(self.round.round), {}) # TODO: model
             current_round_player_data = current_round_data.setdefault("players", {})
             current_round_player_data[self.my_user_uid] = {"track": track}
-            game.data = data
+            game.data = data.copy()
             if len(current_round_player_data) == len(self.players) - 1: # minus proposer
                 game_service.calculate_scores(session, game, self.round.round)
                 game.state = TRANSITION_MAP[game.state]

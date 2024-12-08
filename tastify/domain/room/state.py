@@ -5,7 +5,7 @@ import reflex as rx
 from sqlmodel import select
 from PIL.Image import Image
 
-from tastify.domain.common.state import CommonState
+from tastify.domain.common.state import BaseState
 from tastify.domain.room.utils import generate_room_code
 from tastify.domain.router import Router
 from tastify.domain.spotify.state import logger
@@ -15,7 +15,7 @@ from tastify import db
 COUNT_REQUIRED_PLAYERS = 1
 
 
-class RoomState(rx.State):
+class RoomState(BaseState):
     room: db.Room = None
     room_link: str = None
     room_qrcode: Image = None
@@ -31,7 +31,6 @@ class RoomState(rx.State):
 
     async def load_room(self):
         """Load a room."""
-        common = await self.get_state(CommonState)
         with rx.session() as session:
             self.room = session.exec(select(db.Room).where(db.Room.code == self.room_code)).first()
             self.users_in_room = list(session.exec(
@@ -43,7 +42,7 @@ class RoomState(rx.State):
             self.game = session.exec(select(db.Game).order_by(db.Game.created_at).where(
                 db.Game.room_id == self.room.id,
             )).first()
-            self.is_dashboard = not any(user for user in self.users_in_room if user.user_uid == common.get_client_uid())
+            self.is_dashboard = not any(user for user in self.users_in_room if user.user_uid == self.get_client_uid())
 
     async def refresh_room(self):
         if self.router.page.path != Router.ROOM_PATH:
@@ -73,11 +72,10 @@ class RoomState(rx.State):
             if game:
                 return Router.to_game(self.room.code)
 
-            common = await self.get_state(CommonState)
             game = db.Game(
                 room_id=self.room.id,
                 state=db.GameState.NEW,
-                created_by=common.get_client_uid()
+                created_by=self.get_client_uid()
             )
             session.add(game)
             session.flush()
@@ -104,7 +102,7 @@ def get_user_room(session, user_uid: str, room_id: int) -> Optional[db.UserRoom]
     ).first()
 
 
-class JoinRoomState(rx.State):
+class JoinRoomState(BaseState):
     user_name: str = ""
     target_room: str = ""
 
@@ -122,8 +120,7 @@ class JoinRoomState(rx.State):
             room = session.exec(select(db.Room).where(db.Room.code == target_room_code.upper())).first()
             if not room:
                 return rx.toast.error("Room not found")
-            common = await self.get_state(CommonState)
-            user = common.get_or_create_user(session)
+            user = self.get_or_create_user(session)
             user_room = get_user_room(session, user.uid, room.id)
             if not user_room:
                 user_room = db.UserRoom(user_uid=user.uid, room_id=room.id, name=self.user_name)
@@ -138,7 +135,7 @@ class JoinRoomState(rx.State):
             raise
 
 
-class CreateRoomState(rx.State):
+class CreateRoomState(BaseState):
     def create_room(self):
         """Create a new room."""
         room_code = generate_room_code()

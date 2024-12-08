@@ -54,7 +54,7 @@ def room() -> rx.Component:
         width="100%",
         spacing="6",
         padding_x=["1.5em", "1.5em", "3em"],
-        on_mount=RoomState.load_room,
+        on_mount=RoomState.first_load,
     )
 
 

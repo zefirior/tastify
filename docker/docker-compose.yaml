@@ -1,0 +1,20 @@
+services:
+  local:
+    container_name: "tastify"
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+    image: liinda/tastify-all
+    ports:
+    - "8000:8000"
+    - "3000:3000"
+
+  remote:
+    container_name: "tastify"
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+    image: liinda/tastify-all
+    ports:
+    - "8000:8000"
+    - "3000:80"
