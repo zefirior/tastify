@@ -38,3 +38,9 @@ To set one run the following command in your terminal:
 ```bash
 export DATABASE_URL="<YOUR URL KEY>"
 ```
+
+## Deploying the App
+Update remote through ssh
+```bash
+ssh tastify "bash -s" < ./scripts/update_remote.sh
+```
