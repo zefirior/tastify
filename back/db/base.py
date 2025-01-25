@@ -80,7 +80,7 @@ async def create_all(engine: AsyncEngine, drop: bool = False):
 
 
 async def _main():
-    settings = DBSettings()
+    settings = DBSettings(echo=True)
     engine = settings.setup()
     await create_all(engine, drop=True)
     async with create_session() as session:
