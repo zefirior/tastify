@@ -1,13 +1,25 @@
+import Client from '../lib/backend.js';
 import Box from '@mui/material/Box';
 import InputLabel from '@mui/material/InputLabel';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import * as React from 'react';
 import {FormControl, OutlinedInput} from '@mui/material';
+import {useNavigate} from 'react-router';
 
-export default function ChooseGame() {
+export default function ChooseGame(props) {
     const [playerName, setPlayerName] = React.useState('');
-    const [roomCode, setRoomCode] = React.useState('');
+    const [roomCode, setRoomCode] = React.useState(props.roomCode || '');
+    const navigate = useNavigate();
+
+
+    function createRoom() {
+        console.log('create room');
+        Client.createRoom().then((room) => {
+            console.log('created room', room);
+            navigate(`/room/${room.code}`);
+        });
+    }
 
     return (
         <>
@@ -71,7 +83,7 @@ export default function ChooseGame() {
                         color="secondary"
                         size="small"
                         sx={{flexShrink: 0}}
-                        href={`/room`}
+                        onClick={() => createRoom()}
                     >
                         Create
                     </Button>

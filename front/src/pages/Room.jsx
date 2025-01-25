@@ -1,28 +1,26 @@
 import '../App.css';
 import Page from './Page.jsx';
-import {Link, useParams} from 'react-router';
-import {useEffect, useRef, useState} from 'react';
+import {useParams} from 'react-router';
+import {useContext, useEffect, useRef} from 'react';
+import { observer } from "mobx-react";
+import Client, {UserRole} from '../lib/backend.js';
+import {RoomStoreContext} from '../stores/room.js';
+import PlayerBoard from '../components/PlayerBoard.jsx';
+import Dashboard from '../components/Dashboard.jsx';
 
-export default function Room() {
+const Room = observer(() => {
     const {roomCode} = useParams();
-    const [randomNumber, setRandomNumber] = useState('null');
 
+    const store = useContext(RoomStoreContext);
     const pollingRef = useRef(null);
 
     useEffect(() => {
-        const url = `http://localhost:8000/room/${roomCode}`;
         const startPolling = () => {
             pollingRef.current = setInterval(async () => {
                 console.log('Polling...');
                 try {
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`Response status: ${response.status}`);
-                    }
-
-                    const json = await response.json();
-                    console.log(json);
-                    setRandomNumber(json.random_number);
+                    const room = await Client.getRoom(roomCode);
+                    store.setRoom(room);
                 } catch (error) {
                     console.error(error.message);
                 }
@@ -33,13 +31,26 @@ export default function Room() {
         return () => {
             console.log('Clearing interval...');
             clearInterval(pollingRef.current);
+            store.clear();
         };
-    }, [roomCode]);
+    }, [roomCode, store]);
 
+    if (!store.getRoom()) {
+        return (
+            <Page>
+                <h1>{`Room ${roomCode}: Loading...`}</h1>
+            </Page>
+        );
+    }
+    const room = store.getRoom();
+    console.log('Rendering room', room);
     return (
         <Page>
-            <h1>{`Room ${roomCode}: ${randomNumber}`}</h1>
-            <Link to='/'>Home</Link>
+            {room.role === UserRole.ADMIN
+                ? <Dashboard room={room} />
+                : <PlayerBoard room={room} />}
         </Page>
     );
-}
+});
+
+export default Room;
