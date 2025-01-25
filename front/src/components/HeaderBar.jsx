@@ -7,12 +7,12 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
-import MenuItem from '@mui/material/MenuItem';
 import Drawer from '@mui/material/Drawer';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import ColorModeIconDropdown from './ColorModeIconDropdown';
 import Testify from './TestifyIcon.jsx';
+import {Link} from 'react-router';
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
     display: 'flex',
@@ -53,11 +53,8 @@ export default function HeaderBar() {
                     <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', px: 0 }}>
                         <Testify />
                         <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-                            <Button variant="text" color="info" size="small">
-                                Features
-                            </Button>
-                            <Button variant="text" color="info" size="small">
-                                Testimonials
+                            <Button href="/" variant="text" color="info" size="small">
+                                Home
                             </Button>
                         </Box>
                     </Box>
@@ -97,8 +94,7 @@ export default function HeaderBar() {
                                     </IconButton>
                                 </Box>
 
-                                <MenuItem>Features</MenuItem>
-                                <MenuItem>Testimonials</MenuItem>
+                                <Link to='/'>Home</Link>
                                 <Divider sx={{ my: 3 }} />
                             </Box>
                         </Drawer>
