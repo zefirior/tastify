@@ -37,7 +37,7 @@ class BackendClient {
     }
 
     async increment(code, playerUuid) {
-        return await fetch(`${this.url}/room/${code}/user/${getOrSetPlayerUuid()}/inc`, {
+        return await fetch(`${this.url}/room/${code}/user/${getOrSetPlayerUuid()}/increment`, {
             method: 'POST',
             body: JSON.stringify({player_uuid: playerUuid}),
             headers: {
