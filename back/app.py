@@ -1,5 +1,6 @@
 import random
 from typing import Any
+from uuid import uuid4
 
 from advanced_alchemy.extensions.litestar import SQLAlchemySerializationPlugin
 from litestar import Litestar, get, post, Request, Response, MediaType
@@ -10,18 +11,27 @@ from sqlalchemy.orm.attributes import flag_modified
 
 import consts
 from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings
+from back.db.utils import dump_room
 from consts import ROOM_CODE_ALLOWED_CHARS
 
 
 def generate_room_code(length):
     return ''.join(random.choices(ROOM_CODE_ALLOWED_CHARS, k=length))
 
+
 @post("/room")
-async def create_room() -> Room:
+async def create_room(admin_uuid: str) -> dict[str, Any]:
+    user_stmt = select(User).where(User.pk == admin_uuid)
     async with create_session() as session:
-        room = Room(code=generate_room_code(4), game_state={'is_active': True})
-        session.add(room)
-    return room
+        if (await session.execute(user_stmt)).scalar():
+            raise HTTPException(status_code=400, detail="User already exists")
+
+        user = User(pk=admin_uuid)
+        room = Room(pk=str(uuid4()), code=generate_room_code(4), game_state={'is_active': True})
+        room_user = RoomUser(nickname='admin', role=UserRole.ADMIN.value, user_uuid=admin_uuid, room_uuid=room.pk)
+        session.add_all([room_user, room, user])
+
+    return dump_room(admin_uuid, room, [room_user])
 
 
 @post("/room/{room_code:str}/join")
@@ -40,7 +50,7 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
 
         user = User(pk=user_uuid)
         session.add(user)
-        room_user = RoomUser(nickname=nickname, role=UserRole.player.value, user_uuid=user_uuid, room_uuid=room.pk)
+        room_user = RoomUser(nickname=nickname, role=UserRole.PLAYER.value, user_uuid=user_uuid, room_uuid=room.pk)
         session.add(room_user)
     return Response(status_code=201, content={})
 
@@ -69,24 +79,17 @@ async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
 
 @get("/room/{room_code: str}")
 async def get_game(room_code: str, user_uuid: str) -> dict:
-    stmt = select(RoomUser).join(Room).where(and_(Room.code == room_code))
+    room_stmt = select(Room).where(Room.code == room_code)
+
+    room_user_stmt = select(RoomUser).join(Room).where(and_(Room.code == room_code))
     async with create_session() as session:
-        result = await session.execute(stmt)
+        if not (room := (await session.execute(room_stmt)).scalar()):
+            raise HTTPException(status_code=404, detail="Room not found")
+
+        result = await session.execute(room_user_stmt)
         room_users = [item[0] for item in result.all()]
 
-    return {
-        'code': room_code,
-        'role': [room_user.role for room_user in room_users if room_user.user_uuid == user_uuid][0],
-        'players': [
-            {
-                'uuid': room_user.user_uuid,
-                'nickname': room_user.nickname,
-                'score': 0,
-                'role': room_user.role,
-            }
-            for room_user in room_users
-        ],
-    }
+    return dump_room(user_uuid, room, room_users)
 
 
 def plain_text_exception_handler(_: Request, exc: Exception) -> Response:

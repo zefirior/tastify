@@ -12,8 +12,8 @@ Session = async_sessionmaker(expire_on_commit=False)
 
 
 class UserRole(str, Enum):
-    player = 'player'
-    admin = 'admin'
+    PLAYER = 'PLAYER'
+    ADMIN = 'ADMIN'
 
 
 class DBSettings(BaseSettings):
