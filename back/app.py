@@ -3,13 +3,13 @@ import string
 
 from advanced_alchemy.extensions.litestar import SQLAlchemySerializationPlugin
 from litestar import Litestar, get, post, Request, Response, MediaType
+from litestar.config.cors import CORSConfig
 from litestar.exceptions import HTTPException
 from sqlalchemy import select
 
+import consts
 from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings
-
-ROOM_CODE_LENGTH = 4
-ROOM_CODE_ALLOWED_CHARS = string.ascii_uppercase + string.digits
+from consts import ROOM_CODE_ALLOWED_CHARS
 
 
 def generate_room_code(length):
@@ -74,4 +74,5 @@ app = Litestar(
     [create_room, join_room, increase_points, get_game],
     plugins=[SQLAlchemySerializationPlugin()],
     exception_handlers={HTTPException: plain_text_exception_handler},
+    cors_config=CORSConfig(allow_origins=consts.ALLOW_ORIGINS),
 )

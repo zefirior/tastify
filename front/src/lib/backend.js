@@ -1,3 +1,5 @@
+import {v4 as uuidv4} from 'uuid';
+
 export const UserRole = Object.freeze({
     ADMIN:   Symbol("ADMIN"),
     PLAYER:  Symbol("PLAYER"),
@@ -12,12 +14,21 @@ class Player {
 }
 
 class Room {
-    constructor(code, randomNumber, role, players) {
+    constructor(code, role, players) {
         this.code = code;
-        this.randomNumber = randomNumber;
         this.role = role;
         this.players = players || [];
     }
+}
+
+function getOrSetPlayerUuid() {
+    const playerUuid = localStorage.getItem('playerUuid');
+    if (playerUuid) {
+        return playerUuid;
+    }
+    const newPlayerUuid = uuidv4().toString();
+    localStorage.setItem('playerUuid', newPlayerUuid);
+    return newPlayerUuid
 }
 
 class BackendClient {
@@ -26,7 +37,7 @@ class BackendClient {
     }
 
     async increment(code, playerUuid) {
-        return await fetch(`${this.url}/room/${code}/user/${playerUuid}/increment`, {
+        return await fetch(`${this.url}/room/${code}/user/${getOrSetPlayerUuid()}/inc`, {
             method: 'POST',
             body: JSON.stringify({player_uuid: playerUuid}),
             headers: {
@@ -36,8 +47,23 @@ class BackendClient {
         // TODO: update room store
     }
 
+    async joinRoom(code, nickname) {
+        const url = `${this.url}/room/${code}/join?` + new URLSearchParams({
+            user_uuid: getOrSetPlayerUuid(),
+            nickname: nickname,
+        }.toString());
+        return await fetch(url,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+    }
+
     async getRoom(code) {
-        return await fetch(`${this.url}/room/${code}`)
+        const url = `${this.url}/room/${code}?user_uuid=${getOrSetPlayerUuid()}`;
+        return await fetch(url)
             .then(response => response.json())
             .then(data => this.mapRoom(data));
     }
@@ -48,12 +74,12 @@ class BackendClient {
         })
             .then(response => response.json())
             .then(data => this.mapRoom(data));
+        // TODO: update room store
     }
 
     mapRoom(data) {
         return new Room(
-            data.room_code,
-            data.random_number,
+            data.code,
             data.role === 'ADMIN' ? UserRole.ADMIN : UserRole.PLAYER,
             data.players.map(player => new Player(
                 player.nickname,
