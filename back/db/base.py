@@ -4,7 +4,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic_settings import BaseSettings
-from sqlalchemy import JSON, ForeignKey, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, UniqueConstraint, select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -84,9 +84,12 @@ async def _main():
     engine = settings.setup()
     await create_all(engine, drop=True)
     async with create_session() as session:
-        room = Room(code='1234', game_state={})
-        session.add(room)
-        await session.flush()
+        room_code = '1234'
+        room_stmt = select(Room).where(Room.code == room_code).with_for_update()
+        if not (room := (await session.execute(room_stmt)).scalar()):
+            room = Room(code='1234', game_state={})
+            session.add(room)
+            await session.flush()
         print(room.pk)
 
 
