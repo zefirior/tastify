@@ -6,7 +6,8 @@ from advanced_alchemy.extensions.litestar import SQLAlchemySerializationPlugin
 from litestar import Litestar, get, post, Request, Response, MediaType
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, and_
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.attributes import flag_modified
 
 import consts
@@ -17,11 +18,10 @@ from consts import ROOM_CODE_ALLOWED_CHARS
 def generate_room_code(length):
     return ''.join(random.choices(ROOM_CODE_ALLOWED_CHARS, k=length))
 
-
 @post("/room")
 async def create_room() -> Room:
     async with create_session() as session:
-        room = Room(code=generate_room_code(4), game_state={})
+        room = Room(code=generate_room_code(4), game_state={'is_active': True})
         session.add(room)
     return room
 
@@ -70,8 +70,25 @@ async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
 
 
 @get("/room/{room_code: str}")
-async def get_game(room_code: str) -> str:
-    return room_code
+async def get_game(room_code: str, user_uuid: str) -> dict:
+    stmt = select(RoomUser).join(Room).where(and_(Room.code == room_code))
+    async with create_session() as session:
+        result = await session.execute(stmt)
+        room_users = [item[0] for item in result.all()]
+
+    return {
+        'code': room_code,
+        'role': [room_user.role for room_user in room_users if room_user.user_uuid == user_uuid][0],
+        'players': [
+            {
+                'uuid': room_user.user_uuid,
+                'nickname': room_user.nickname,
+                'score': 0,
+                'role': room_user.role,
+            }
+            for room_user in room_users
+        ],
+    }
 
 
 def plain_text_exception_handler(_: Request, exc: Exception) -> Response:
