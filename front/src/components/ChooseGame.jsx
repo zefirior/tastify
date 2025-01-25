@@ -21,6 +21,16 @@ export default function ChooseGame(props) {
         });
     }
 
+    function joinRoom() {
+        console.log('join room');
+        Client.joinRoom().then(() => {
+            console.log('joined room', roomCode);
+            navigate(`/room/${roomCode}`);
+        });
+    }
+
+    const isNotReadyToJoin = !playerName || !roomCode;
+
     return (
         <>
             <h1>{'Choose your game'}</h1>
@@ -69,11 +79,12 @@ export default function ChooseGame(props) {
                     </FormControl>
 
                     <Button
-                        variant="contained"
+                        variant="text"
                         color="primary"
                         size="small"
                         sx={{flexShrink: 0}}
-                        href={`/room/${roomCode}`}
+                        disabled={isNotReadyToJoin}
+                        onClick={() => joinRoom()}
                     >
                         Join
                     </Button>

@@ -5,15 +5,6 @@ import PlayersGrid from './PlayersGrid.jsx';
 import {v4 as uuidv4} from 'uuid';
 
 export default function PlayerBoard({room}) {
-    function getOrSetPlayerUuid() {
-        const playerUuid = localStorage.getItem('playerUuid');
-        if (playerUuid) {
-            return playerUuid;
-        }
-        const newPlayerUuid = uuidv4();
-        localStorage.setItem('playerUuid', newPlayerUuid);
-        return newPlayerUuid
-    }
 
     function increment() {
         console.log('increment');
