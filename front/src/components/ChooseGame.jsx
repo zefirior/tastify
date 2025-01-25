@@ -1,12 +1,14 @@
 import Box from '@mui/material/Box';
 import InputLabel from '@mui/material/InputLabel';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import * as React from 'react';
 import {FormControl, OutlinedInput} from '@mui/material';
 
 export default function ChooseGame() {
+    const [playerName, setPlayerName] = React.useState('');
+    const [roomCode, setRoomCode] = React.useState('');
+
     return (
         <>
             <h1>{'Choose your game'}</h1>
@@ -31,6 +33,8 @@ export default function ChooseGame() {
                             aria-label="Enter your player name"
                             // label="Player name"
                             placeholder="Fun name"
+                            value={playerName}
+                            onChange={(event) => setPlayerName(event.target.value)}
                         />
                     </FormControl>
 
@@ -47,6 +51,8 @@ export default function ChooseGame() {
                             aria-label="Enter room code to join"
                             // label="Player name"
                             placeholder="Room code"
+                            value={roomCode}
+                            onChange={(event) => setRoomCode(event.target.value)}
                         />
                     </FormControl>
 
@@ -55,6 +61,7 @@ export default function ChooseGame() {
                         color="primary"
                         size="small"
                         sx={{flexShrink: 0}}
+                        href={`/room/${roomCode}`}
                     >
                         Join
                     </Button>
@@ -64,6 +71,7 @@ export default function ChooseGame() {
                         color="secondary"
                         size="small"
                         sx={{flexShrink: 0}}
+                        href={`/room`}
                     >
                         Create
                     </Button>
