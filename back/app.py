@@ -1,11 +1,13 @@
 import random
 import string
+from typing import Any
 
 from advanced_alchemy.extensions.litestar import SQLAlchemySerializationPlugin
 from litestar import Litestar, get, post, Request, Response, MediaType
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm.attributes import flag_modified
 
 import consts
 from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings
@@ -25,33 +27,47 @@ async def create_room() -> Room:
 
 
 @post("/room/{room_code:str}/join")
-async def join_room(room_code: str, nickname: str) -> Response:
-    stmt = select(Room).where(Room.code == room_code)
+async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
+    room_stmt = select(Room).where(Room.code == room_code)
     async with create_session() as session:
-        if not (room := (await session.execute(stmt)).scalar()):
+        if not (room := (await session.execute(room_stmt)).scalar()):
             raise HTTPException(status_code=404, detail="Room not found")
 
-        stmt = (
+        room_user_stmt = (
             select(RoomUser)
             .where(RoomUser.room_uuid == room.pk, RoomUser.nickname == nickname)
         )
-        if (await session.execute(stmt)).scalar():
+        if (await session.execute(room_user_stmt)).scalar():
             raise HTTPException(status_code=400, detail="Nickname already taken")
 
-        user = User()
+        user = User(pk=user_uuid)
         session.add(user)
-        await session.flush()
-        room_user = RoomUser(nickname=nickname, role=UserRole.player.value, user_uuid=user.pk, room_uuid=room.pk)
+        room_user = RoomUser(nickname=nickname, role=UserRole.player.value, user_uuid=user_uuid, room_uuid=room.pk)
         session.add(room_user)
     return Response(status_code=201, content={})
 
 
-@post("/r/{room_code: str}/user/{uuid: str}/inc")
-async def increase_points(request: Request, room_code: str, uuid: str) -> dict:
-    data = request.json()
-    new_data = {}
-    # return Response(content=new_data, media_type="application/json")
-    return {}
+@post("/room/{room_code:str}/user/{user_pk:str}/increment")
+async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
+    room_stmt = select(Room).where(Room.code == room_code).with_for_update()
+    async with create_session() as session:
+        if not (room := (await session.execute(room_stmt)).scalar()):
+            raise HTTPException(status_code=404, detail="Room not found")
+
+        room_user_stmt = (
+            select(RoomUser)
+            .where(RoomUser.room_uuid == room.pk, RoomUser.user_uuid == user_pk)
+        )
+        if not (await session.execute(room_user_stmt)).scalar():
+            raise HTTPException(status_code=400, detail="User not found")
+
+        flag_modified(room, "game_state")
+        room.game_state.setdefault("points", {})
+        room.game_state["points"].setdefault(user_pk, 0)
+        room.game_state["points"][user_pk] += 1
+
+    return room.game_state
+
 
 @get("/room/{room_code: str}")
 async def get_game(room_code: str) -> str:
