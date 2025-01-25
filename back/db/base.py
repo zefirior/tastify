@@ -7,11 +7,11 @@ from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-Session = async_sessionmaker()
+Session = async_sessionmaker(expire_on_commit=False)
 
 
 class DBSettings(BaseSettings):
-    url: str = 'postgresql+asyncpg://postgres@localhost:5432/postgres'
+    url: str = 'postgresql+asyncpg://tastify:tastify@localhost:5432/tastify'
     echo: bool = False
 
     class Config:
@@ -46,7 +46,7 @@ class Room(Base):
     code: Mapped[str] = mapped_column(nullable=False)
     game_state: Mapped[dict[str, Any]] = mapped_column(type_=JSON, nullable=False)
 
-    users: Mapped[list['RoomUser']] = relationship("RoomUser", back_populates="room", uselist=True)
+    # users: Mapped[list['RoomUser']] = relationship("RoomUser", back_populates="room", uselist=True, lazy="joined")
 
 
 class User(Base):
@@ -61,7 +61,7 @@ class RoomUser(Base):
     role: Mapped[str] = mapped_column(nullable=False)
     nickname: Mapped[str] = mapped_column(nullable=False)
 
-    room: Mapped[Room] = relationship(Room, back_populates="users", uselist=False)
+    # room: Mapped[Room] = relationship(Room, back_populates="users", uselist=False)
     user: Mapped[User] = relationship(User, uselist=False)
 
     __table_args__ = (
