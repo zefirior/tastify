@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -10,8 +11,13 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 Session = async_sessionmaker(expire_on_commit=False)
 
 
+class UserRole(str, Enum):
+    player = 'player'
+    admin = 'admin'
+
+
 class DBSettings(BaseSettings):
-    url: str = 'postgresql+asyncpg://tastify:tastify@localhost:5432/tastify'
+    url: str = 'postgresql+asyncpg://postgres@localhost:5432/postgres'
     echo: bool = False
 
     class Config:
@@ -43,10 +49,8 @@ class Base(DeclarativeBase):
 class Room(Base):
     __tablename__ = "room"
 
-    code: Mapped[str] = mapped_column(nullable=False)
+    code: Mapped[str] = mapped_column(nullable=False, unique=True)
     game_state: Mapped[dict[str, Any]] = mapped_column(type_=JSON, nullable=False)
-
-    # users: Mapped[list['RoomUser']] = relationship("RoomUser", back_populates="room", uselist=True, lazy="joined")
 
 
 class User(Base):
@@ -61,7 +65,6 @@ class RoomUser(Base):
     role: Mapped[str] = mapped_column(nullable=False)
     nickname: Mapped[str] = mapped_column(nullable=False)
 
-    # room: Mapped[Room] = relationship(Room, back_populates="users", uselist=False)
     user: Mapped[User] = relationship(User, uselist=False)
 
     __table_args__ = (
