@@ -27,4 +27,5 @@ dist-ssr
 .python-version
 venv
 .venv
+.env
 __pycache__
