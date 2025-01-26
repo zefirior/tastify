@@ -40,64 +40,70 @@ export default function ChooseGame(props) {
                 noValidate
                 autoComplete="off"
             >
-                <Stack direction="row" spacing={1} useFlexGap>
-                    <FormControl>
-                        <InputLabel
-                            className={'input-label'}
-                            htmlFor="join-room-player-name"
-                        >Fun name</InputLabel>
-                        <OutlinedInput
-                            id="join-room-player-name"
-                            fullWidth
-                            // size="small"
-                            // sx={{width: '250px'}}
-                            // defaultValue="Composed TextField sdfsd"
-                            aria-label="Enter your player name"
-                            // label="Player name"
-                            placeholder="Fun name"
-                            value={playerName}
-                            onChange={(event) => setPlayerName(event.target.value)}
-                        />
-                    </FormControl>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap>
+                    <div>
+                        <FormControl className={'mb-2'}>
+                            <InputLabel
+                                className={'input-label'}
+                                htmlFor="join-room-player-name"
+                            >Fun name</InputLabel>
+                            <OutlinedInput
+                                id="join-room-player-name"
+                                fullWidth
+                                // size="small"
+                                // sx={{width: '250px'}}
+                                // defaultValue="Composed TextField sdfsd"
+                                aria-label="Enter your player name"
+                                // label="Player name"
+                                placeholder="Fun name"
+                                value={playerName}
+                                onChange={(event) => setPlayerName(event.target.value)}
+                            />
+                        </FormControl>
 
-                    <FormControl>
-                        <InputLabel
-                            htmlFor="join-room-code"
-                        >Room code</InputLabel>
-                        <OutlinedInput
-                            id="join-room-code"
-                            fullWidth
-                            // size="small"
-                            // sx={{width: '250px'}}
-                            // defaultValue="Composed TextField sdfsd"
-                            aria-label="Enter room code to join"
-                            // label="Player name"
-                            placeholder="Room code"
-                            value={roomCode}
-                            onChange={(event) => setRoomCode(event.target.value)}
-                        />
-                    </FormControl>
+                        &nbsp;&nbsp;&nbsp;
 
-                    <Button
-                        variant="text"
-                        color="primary"
-                        size="small"
-                        sx={{flexShrink: 0}}
-                        disabled={isNotReadyToJoin}
-                        onClick={() => joinRoom()}
-                    >
-                        Join
-                    </Button>
-                    <span>or</span>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        size="small"
-                        sx={{flexShrink: 0}}
-                        onClick={() => createRoom()}
-                    >
-                        Create
-                    </Button>
+                        <FormControl className={'mb-2'}>
+                            <InputLabel
+                                htmlFor="join-room-code"
+                            >Room code</InputLabel>
+                            <OutlinedInput
+                                id="join-room-code"
+                                fullWidth
+                                // size="small"
+                                // sx={{width: '250px'}}
+                                // defaultValue="Composed TextField sdfsd"
+                                aria-label="Enter room code to join"
+                                // label="Player name"
+                                placeholder="Room code"
+                                value={roomCode}
+                                onChange={(event) => setRoomCode(event.target.value)}
+                            />
+                        </FormControl>
+                    </div>
+
+                    <div>
+                        <Button
+                            variant="text"
+                            color="primary"
+                            size="small"
+                            sx={{flexShrink: 0}}
+                            disabled={isNotReadyToJoin}
+                            onClick={() => joinRoom()}
+                        >
+                            Join
+                        </Button>
+                        <span>or&nbsp;&nbsp;&nbsp;</span>
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            size="small"
+                            sx={{flexShrink: 0}}
+                            onClick={() => createRoom()}
+                        >
+                            Create
+                        </Button>
+                    </div>
                 </Stack>
             </Box>
         </>

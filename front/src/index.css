@@ -82,3 +82,7 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.mb-2 {
+  margin-bottom: 5px !important;
+}
