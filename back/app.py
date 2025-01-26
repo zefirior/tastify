@@ -211,7 +211,36 @@ async def submit_track(room_code: str, user_uuid: str, track_id: str | None = No
 
 @post("/room/{room_code:str}/next-round")
 async def next_round(room_code: str, user_uuid: str) -> Response:
-    pass
+    async with create_session() as session:
+        room = await get_or_404_room(session, room_code)
+        if room.status != RoomStatus.RUNNING:
+            raise HTTPException(status_code=400, detail="Room is not running")
+        if room.created_by == user_uuid:
+            raise HTTPException(status_code=403, detail="Admin cannot start next round")
+        if not room.rounds:
+            raise RuntimeError("Unreachable")
+        await acquire_advisory_lock(session, room)
+
+        previous_round: Round = room.rounds[-1]  # type: ignore
+        if previous_round.suggester.user_uuid != user_uuid:
+            raise HTTPException(status_code=403, detail="Only suggester can start next round")
+        if previous_round.current_stage != RoundStages.END_ROUND:
+            raise HTTPException(status_code=400, detail="Current round is not finished yet")
+        if previous_round.number == room.total_rounds:
+            room.status = RoomStatus.FINISHED
+        else:
+            room_users = await get_room_users(session, room_code)
+            new_round = Round(
+                room_uuid=room.pk,
+                suggester_uuid=room_users[previous_round.number].pk,
+                number=previous_round.number + 1,
+                submissions={},
+                current_stage=RoundStages.GROUP_SUGGESTION,
+                results={},
+            )
+            session.add(new_round)
+
+    return Response(status_code=200, content={})
 
 
 @get("/search/group")
