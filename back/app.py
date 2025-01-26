@@ -13,10 +13,9 @@ from sqlalchemy.orm.attributes import flag_modified
 
 import consts
 from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings, RoomStatus
-from back.db.utils import dump_room
+from back.db.utils import dump_room, acquire_advisory_lock
 from consts import ROOM_CODE_ALLOWED_CHARS
 from spotify import spotify_api
-
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +26,7 @@ def generate_room_code(length):
     return ''.join(random.choices(ROOM_CODE_ALLOWED_CHARS, k=length))
 
 
-async def get_user(session, user_uuid: str) -> User:
+async def get_or_create_user(session, user_uuid: str) -> User:
     user_stmt = select(User).where(User.pk == user_uuid)
     if not (user := (await session.execute(user_stmt)).scalar()):
         user = User(pk=user_uuid)
@@ -36,10 +35,17 @@ async def get_user(session, user_uuid: str) -> User:
     return user
 
 
+async def get_or_404_room(session, room_code: str) -> Room:
+    room_stmt = select(Room).where(Room.code == room_code)
+    if not (room := (await session.execute(room_stmt)).scalar()):
+        raise HTTPException(status_code=404, detail="Room not found")
+    return room
+
+
 @post("/room")
 async def create_room(admin_uuid: str) -> dict[str, Any]:
     async with create_session() as session:
-        user = await get_user(session, admin_uuid)
+        user = await get_or_create_user(session, admin_uuid)
 
         room = Room(
             pk=str(uuid4()),
@@ -55,10 +61,8 @@ async def create_room(admin_uuid: str) -> dict[str, Any]:
 
 @post("/room/{room_code:str}/join")
 async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
-    room_stmt = select(Room).where(Room.code == room_code)
     async with create_session() as session:
-        if not (room := (await session.execute(room_stmt)).scalar()):
-            raise HTTPException(status_code=404, detail="Room not found")
+        room = await get_or_404_room(session, room_code)
         if room.status != RoomStatus.NEW:
             raise HTTPException(status_code=400, detail="Room is not accepting new players")
 
@@ -69,7 +73,7 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
         if (await session.execute(room_user_stmt)).scalar():
             raise HTTPException(status_code=400, detail="Nickname already taken")
 
-        user = await get_user(session, user_uuid)
+        user = await get_or_create_user(session, user_uuid)
         room_user = RoomUser(nickname=nickname, role=UserRole.PLAYER.value, user_uuid=user.pk, room_uuid=room.pk)
         session.add(room_user)
     return Response(status_code=201, content={})
@@ -77,10 +81,9 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
 
 @post("/room/{room_code:str}/user/{user_pk:str}/increment", deprecated=True)
 async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
-    room_stmt = select(Room).where(Room.code == room_code).with_for_update()
     async with create_session() as session:
-        if not (room := (await session.execute(room_stmt)).scalar()):
-            raise HTTPException(status_code=404, detail="Room not found")
+        room = await get_or_404_room(session, room_code)
+        await acquire_advisory_lock(session, room)
 
         room_user_stmt = (
             select(RoomUser)
@@ -97,19 +100,50 @@ async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
     return room.game_state
 
 
-@get("/room/{room_code: str}")
+@get("/room/{room_code:str}")
 async def get_game(room_code: str, user_uuid: str) -> dict:
-    room_stmt = select(Room).where(Room.code == room_code)
-
     room_user_stmt = select(RoomUser).join(Room).where(and_(Room.code == room_code))
     async with create_session() as session:
-        if not (room := (await session.execute(room_stmt)).scalar()):
-            raise HTTPException(status_code=404, detail="Room not found")
+        room = await get_or_404_room(session, room_code)
+        if room.created_by == user_uuid:
+            await acquire_advisory_lock(session, room)
+            for rnd in room.rounds:
+                await acquire_advisory_lock(session, rnd)
 
-        result = await session.execute(room_user_stmt)
-        room_users = [item[0] for item in result.all()]
+        room_users_result = await session.execute(room_user_stmt)
+        room_users = [item[0] for item in room_users_result.all()]
 
         return dump_room(user_uuid, room, room_users)
+
+
+@post("/room/{room_code:str}/start")
+async def start_game(room_code: str, user_uuid: str) -> Response:
+    async with create_session() as session:
+        room = await get_or_404_room(session, room_code)
+        if room.created_by != user_uuid:
+            raise HTTPException(status_code=403, detail="Only admin can start the game")
+        if room.status != RoomStatus.NEW:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Room should be in {RoomStatus.NEW} state, got {room.status} instead",
+            )
+        room.status = RoomStatus.RUNNING
+    return Response(status_code=200, content={})
+
+
+@post("/room/{room_code:str}/submit/group")
+async def submit_group(room_code: str, user_uuid: str, group_id: str) -> Response:
+    pass
+
+
+@post("/room/{room_code:str}/submit/track")
+async def submit_track(room_code: str, user_uuid: str, track_id: str) -> Response:
+    pass
+
+
+@post("/room/{room_code:str}/next-round")
+async def next_round(room_code: str, user_uuid: str) -> Response:
+    pass
 
 
 @get("/search/group")
@@ -167,7 +201,7 @@ logging_config = LoggingConfig(
 settings = DBSettings()
 settings.setup()
 app = Litestar(
-    [create_room, join_room, increase_points, get_game, search_groups, search_tracks],
+    [create_room, join_room, increase_points, get_game, start_game, submit_group, submit_track, next_round, search_groups, search_tracks],
     plugins=[SQLAlchemySerializationPlugin()],
     exception_handlers={HTTPException: plain_text_exception_handler},
     cors_config=CORSConfig(allow_origins=consts.ALLOW_ORIGINS),
