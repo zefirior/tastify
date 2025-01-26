@@ -38,6 +38,7 @@ def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[st
     return {
         'code': room.code,
         'role': role,
+        'status': room.status,
         'players': [
             {
                 'uuid': room_user.user_uuid,

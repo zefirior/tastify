@@ -12,6 +12,12 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 Session = async_sessionmaker(expire_on_commit=False)
 
 
+class RoomStatus(str, Enum):
+    NEW = 'NEW'
+    RUNNING = 'RUNNING'
+    FINISHED = 'FINISHED'
+
+
 class UserRole(str, Enum):
     PLAYER = 'PLAYER'
     ADMIN = 'ADMIN'
@@ -68,6 +74,7 @@ class Room(Base):
     code: Mapped[str] = mapped_column(nullable=False, unique=True)
     game_state: Mapped[dict[str, Any]] = mapped_column(type_=JSON, nullable=False)
     created_by: Mapped[UUID] = mapped_column(ForeignKey(User.pk), nullable=False)
+    status: Mapped[str] = mapped_column(nullable=False, default=RoomStatus.NEW.value)
 
     rounds: Mapped[list['Round']] = relationship('Round', lazy='joined', back_populates='room', uselist=True, order_by=lambda: Round.number)
 
@@ -122,7 +129,7 @@ async def _main():
             user = User(pk='BBBB')
             session.add(user)
             await session.flush()
-            room = Room(code='1234', game_state={}, created_by=user.pk, pk='AAAA')
+            room = Room(code='1234', game_state={}, created_by=user.pk, pk='AAAA', status=RoomStatus.NEW.value)
             session.add(room)
             await session.flush()
         print(room.pk)
