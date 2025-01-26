@@ -90,5 +90,6 @@ class BackendClient {
     }
 }
 
-const Client = new BackendClient('http://localhost:8000');
+const url = import.meta.env['VITE_BACKEND_URL'] || 'http://localhost:8000';
+const Client = new BackendClient(url);
 export default Client;

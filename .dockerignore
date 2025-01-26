@@ -12,7 +12,7 @@ venv
 .coverage.*
 .cache
 coverage.xml
-*,cover
+*.cover
 *.log
 .git
 front/node_modules
