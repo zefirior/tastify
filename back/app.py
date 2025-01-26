@@ -12,8 +12,10 @@ from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
 import consts
-from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings, RoomStatus, Round, RoundStages
-from back.db.utils import dump_room, acquire_advisory_lock
+from back.db.base import create_session, Room, UserRole, RoomUser, DBSettings, RoomStatus, RoundStages
+from back.db.utils import dump_room
+from back.db.query_utils import get_or_create_user, get_or_404_room, get_room_users, get_room, get_last_round, \
+    create_round, acquire_advisory_lock
 from consts import ROOM_CODE_ALLOWED_CHARS
 from spotify import spotify_api
 
@@ -24,28 +26,6 @@ logger.addHandler(logging.StreamHandler())
 
 def generate_room_code(length):
     return ''.join(random.choices(ROOM_CODE_ALLOWED_CHARS, k=length))
-
-
-async def get_or_create_user(session, user_uuid: str) -> User:
-    user_stmt = select(User).where(User.pk == user_uuid)
-    if not (user := (await session.execute(user_stmt)).scalar()):
-        user = User(pk=user_uuid)
-        session.add(user)
-        await session.flush()
-    return user
-
-
-async def get_or_404_room(session, room_code: str) -> Room:
-    room_stmt = select(Room).where(Room.code == room_code)
-    if not (room := (await session.execute(room_stmt)).scalar()):
-        raise HTTPException(status_code=404, detail="Room not found")
-    return room
-
-
-async def get_room_users(session, room_code) -> list[RoomUser]:
-    room_user_stmt = select(RoomUser).join(Room).where(Room.code == room_code).order_by(RoomUser.user_uuid)
-    room_users_result = await session.execute(room_user_stmt)
-    return [item[0] for item in room_users_result.all()]
 
 
 @post("/room")
@@ -68,9 +48,12 @@ async def create_room(admin_uuid: str) -> dict[str, Any]:
 @post("/room/{room_code:str}/join")
 async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
     async with create_session() as session:
-        room = await get_or_404_room(session, room_code)
-        if room.status != RoomStatus.NEW:
-            raise HTTPException(status_code=400, detail="Room is not accepting new players")
+        room = await get_room(
+            session,
+            room_code,
+            required_status=RoomStatus.NEW,
+            lock=True,
+        )
 
         room_user_stmt = (
             select(RoomUser)
@@ -88,8 +71,7 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
 @post("/room/{room_code:str}/user/{user_pk:str}/increment", deprecated=True)
 async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
     async with create_session() as session:
-        room = await get_or_404_room(session, room_code)
-        await acquire_advisory_lock(session, room)
+        room = await get_room(session, room_code, lock=True)
 
         room_user_stmt = (
             select(RoomUser)
@@ -120,32 +102,27 @@ async def get_game(room_code: str, user_uuid: str) -> dict:
 @post("/room/{room_code:str}/start")
 async def start_game(room_code: str, user_uuid: str) -> Response:
     async with create_session() as session:
-        room = await get_or_404_room(session, room_code)
-        if room.created_by != user_uuid:
-            raise HTTPException(status_code=403, detail="Only admin can start the game")
-        await acquire_advisory_lock(session, room)
+        room = await get_room(
+            session,
+            room_code,
+            required_created_by=user_uuid,
+            required_status=RoomStatus.NEW,
+            lock=True,
+        )
 
         room_users = await get_room_users(session, room_code)
         if len(room_users) < 2:
             raise HTTPException(status_code=404, detail="Need at least two players to start the game")
 
-        if room.status != RoomStatus.NEW:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Room should be in {RoomStatus.NEW} state, got {room.status} instead",
-            )
         room.status = RoomStatus.RUNNING
         room.total_rounds = len(room_users)
 
-        first_round = Round(
+        await create_round(
+            session,
             room_uuid=room.pk,
             suggester_uuid=room_users[0].pk,
             number=1,
-            submissions={},
-            current_stage=RoundStages.GROUP_SUGGESTION,
-            results={},
         )
-        session.add(first_round)
 
     return Response(status_code=200, content={})
 
@@ -153,20 +130,20 @@ async def start_game(room_code: str, user_uuid: str) -> Response:
 @post("/room/{room_code:str}/submit/group")
 async def submit_group(room_code: str, user_uuid: str, group_id: str) -> Response:
     async with create_session() as session:
-        room = await get_or_404_room(session, room_code)
-        if room.status != RoomStatus.RUNNING:
-            raise HTTPException(status_code=400, detail="Room is not running")
-        if room.created_by == user_uuid:
-            raise HTTPException(status_code=403, detail="Only suggester can submit group")
-        if not room.rounds:
-            raise RuntimeError("Unreachable")
-        await acquire_advisory_lock(session, room)
+        room = await get_room(
+            session,
+            room_code,
+            forbidden_created_by=user_uuid,
+            required_status=RoomStatus.RUNNING,
+            lock=True,
+        )
 
-        current_round: Round = room.rounds[-1]  # type: ignore
-        if current_round.suggester.user_uuid != user_uuid:
-            raise HTTPException(status_code=403, detail="Only suggester can submit group")
-        if current_round.current_stage != RoundStages.GROUP_SUGGESTION:
-            raise HTTPException(status_code=400, detail="Invalid round stage")
+        current_round = await get_last_round(
+            room.rounds,
+            required_suggester=user_uuid,
+            required_stage=RoundStages.GROUP_SUGGESTION,
+        )
+
         current_round.group_id = group_id
         current_round.current_stage = RoundStages.TRACKS_SUBMISSION
 
@@ -176,22 +153,24 @@ async def submit_group(room_code: str, user_uuid: str, group_id: str) -> Respons
 @post("/room/{room_code:str}/submit/track")
 async def submit_track(room_code: str, user_uuid: str, track_id: str | None = None) -> Response:
     async with create_session() as session:
-        room = await get_or_404_room(session, room_code)
-        if room.status != RoomStatus.RUNNING:
-            raise HTTPException(status_code=400, detail="Room is not running")
-        if room.created_by == user_uuid:
-            raise HTTPException(status_code=403, detail="Admin cannot submit tracks")
+        room = await get_room(
+            session,
+            room_code,
+            forbidden_created_by=user_uuid,
+            required_status=RoomStatus.RUNNING,
+            lock=True,
+        )
+
         if not room.rounds:
             raise RuntimeError("Unreachable")
-        await acquire_advisory_lock(session, room)
-
-        current_round: Round = room.rounds[-1]  # type: ignore
-        if current_round.suggester.user_uuid == user_uuid:
-            raise HTTPException(status_code=403, detail="Suggester cannot submit tracks")
-        if current_round.current_stage != RoundStages.TRACKS_SUBMISSION:
-            raise HTTPException(status_code=400, detail="Invalid round stage")
+        current_round = await get_last_round(
+            room.rounds,
+            forbidden_suggester=user_uuid,
+            required_stage=RoundStages.TRACKS_SUBMISSION,
+        )
         if user_uuid in current_round.submissions:
             raise HTTPException(status_code=400, detail="User already submitted")
+
         current_round.submissions[user_uuid] = track_id
         flag_modified(current_round, "submissions")
 
@@ -212,33 +191,30 @@ async def submit_track(room_code: str, user_uuid: str, track_id: str | None = No
 @post("/room/{room_code:str}/next-round")
 async def next_round(room_code: str, user_uuid: str) -> Response:
     async with create_session() as session:
-        room = await get_or_404_room(session, room_code)
-        if room.status != RoomStatus.RUNNING:
-            raise HTTPException(status_code=400, detail="Room is not running")
-        if room.created_by == user_uuid:
-            raise HTTPException(status_code=403, detail="Admin cannot start next round")
-        if not room.rounds:
-            raise RuntimeError("Unreachable")
+        room = await get_room(
+            session,
+            room_code,
+            forbidden_created_by=user_uuid,
+            required_status=RoomStatus.RUNNING,
+        )
         await acquire_advisory_lock(session, room)
 
-        previous_round: Round = room.rounds[-1]  # type: ignore
-        if previous_round.suggester.user_uuid != user_uuid:
-            raise HTTPException(status_code=403, detail="Only suggester can start next round")
-        if previous_round.current_stage != RoundStages.END_ROUND:
-            raise HTTPException(status_code=400, detail="Current round is not finished yet")
+        previous_round = await get_last_round(
+            room.rounds,
+            required_suggester=user_uuid,
+            required_stage=RoundStages.END_ROUND,
+        )
+
         if previous_round.number == room.total_rounds:
             room.status = RoomStatus.FINISHED
         else:
             room_users = await get_room_users(session, room_code)
-            new_round = Round(
+            await create_round(
+                session,
                 room_uuid=room.pk,
                 suggester_uuid=room_users[previous_round.number].pk,
                 number=previous_round.number + 1,
-                submissions={},
-                current_stage=RoundStages.GROUP_SUGGESTION,
-                results={},
             )
-            session.add(new_round)
 
     return Response(status_code=200, content={})
 
