@@ -3,34 +3,20 @@ from datetime import datetime, timezone
 from typing import Any
 
 from back.consts import ROUND_DURATION_SEC
-from back.db.base import Room, RoomUser, UserRole, Round
+from back.db.base import Room, RoomUser, UserRole, Round, RoomStatus, RoundStages
+from back.db.query_utils import end_round, acquire_advisory_lock
 
 
-def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[str, Any]:
+async def dump_room(session, user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[str, Any]:
     role = None
     if room.created_by == user_uuid:
         role = UserRole.ADMIN.value
     elif room_user := next((ru for ru in room_users if ru.user_uuid == user_uuid), None):
         role = room_user.role
 
+    current_round = None
     if room.rounds:
-        cur: Round = room.rounds[-1]  # type: ignore
-        if (timeleft := (cur.started_at - get_utc_now()).total_seconds() + ROUND_DURATION_SEC) < 0:
-            timeleft = 0
-        current_round = {
-            'number': cur.number,
-            'timeleft': timeleft,
-            'group_id': cur.group_id,
-            'submissions': cur.submissions,
-            'current_stage': cur.current_stage,
-            'results': cur.results,
-            'suggester': {
-                'nickname': cur.suggester.nickname,
-                'uuid': cur.suggester.user_uuid,
-            },
-        }
-    else:
-        current_round = None
+        current_round = await _dump_round(room, room.rounds[-1], session)
 
     total_results = defaultdict(int)
     for r in room.rounds:
@@ -53,6 +39,30 @@ def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[st
             'rounds': room.total_rounds,
             'current_round': current_round,
             'total_results': total_results,
+        },
+    }
+
+
+async def _dump_round(room: Room, rnd: Round, session) -> dict[str, Any]:
+    if room.status == RoomStatus.FINISHED or rnd.current_stage == RoundStages.END_ROUND:
+        timeleft = 0
+    else:
+        time_passed = int((get_utc_now() - rnd.started_at).total_seconds())
+        if (timeleft := ROUND_DURATION_SEC - time_passed) < 0:
+            timeleft = 0
+            await acquire_advisory_lock(session, room)
+            await end_round(rnd)
+
+    return {
+        'number': rnd.number,
+        'timeleft': timeleft,
+        'group_id': rnd.group_id,
+        'submissions': rnd.submissions,
+        'current_stage': rnd.current_stage,
+        'results': rnd.results,
+        'suggester': {
+            'nickname': rnd.suggester.nickname,
+            'uuid': rnd.suggester.user_uuid,
         },
     }
 

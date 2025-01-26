@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic_settings import BaseSettings
-from sqlalchemy import JSON, ForeignKey, UniqueConstraint, select, BIGINT, DateTime
+from sqlalchemy import JSON, ForeignKey, UniqueConstraint, select, BIGINT, DateTime, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -102,7 +102,7 @@ class Round(Base):
     suggester_uuid: Mapped[UUID] = mapped_column(ForeignKey(RoomUser.pk), nullable=False)
 
     number: Mapped[int] = mapped_column(nullable=False)
-    started_at: Mapped[datetime] = mapped_column(nullable=False, server_default='now()')
+    started_at: Mapped[datetime] = mapped_column(nullable=False, server_default=text('now()'))
     group_id: Mapped[str] = mapped_column(nullable=True)
     submissions: Mapped[dict[str, str]] = mapped_column(type_=JSON, nullable=True)
     current_stage: Mapped[str] = mapped_column(nullable=False)
