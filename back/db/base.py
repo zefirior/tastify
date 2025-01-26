@@ -122,6 +122,7 @@ async def create_all(engine: AsyncEngine, drop: bool = False):
 async def _main():
     settings = DBSettings(echo=True)
     engine = settings.setup()
+
     await create_all(engine, drop=True)
     async with create_session() as session:
         room_code = '1234'
@@ -130,10 +131,10 @@ async def _main():
             user = User(pk='BBBB')
             session.add(user)
             await session.flush()
-            room = Room(code='1234', game_state={}, created_by=user.pk, pk='AAAA', status=RoomStatus.NEW.value)
+            room = Room(code=room_code, game_state={}, created_by=user.pk, pk='AAAA', status=RoomStatus.NEW.value)
             session.add(room)
             await session.flush()
-        print(room.pk)
+        print(f'{room.pk = }')
 
 
 if __name__ == '__main__':
