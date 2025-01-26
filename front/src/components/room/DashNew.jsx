@@ -33,7 +33,7 @@ export default function DashNew({room}) {
                 sx={{flexShrink: 0}}
                 onClick={start}
             >Start game</Button>
-            <PlayersGrid players={room.players} />
+            <PlayersGrid room={room} />
         </>
     );
 }
