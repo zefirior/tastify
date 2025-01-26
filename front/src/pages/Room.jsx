@@ -15,11 +15,11 @@ const Room = observer(() => {
 
     const store = useContext(RoomStoreContext);
     const pollingRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const startPolling = () => {
             pollingRef.current = setInterval(async () => {
-                console.log('Polling...');
                 try {
                     const room = await Client.getRoom(roomCode);
                     store.setRoom(room);
@@ -45,9 +45,7 @@ const Room = observer(() => {
         );
     }
     const room = store.getRoom();
-    console.log('Rendering room', room);
 
-    const navigate = useNavigate();
     if (room.status === RoomStatus.FINISHED) {
         return navigate('/');
     }

@@ -18,18 +18,35 @@ export const RoomStatus = Object.freeze({
 });
 
 class Player {
-    constructor(nickname, score, role) {
+    constructor(uuid, nickname, role) {
+        this.uuid = uuid;
         this.nickname = nickname;
-        this.score = score;
         this.role = role;
     }
 }
 
+class CurrentRound {
+    constructor(timeLeft, groupName, stage, suggester) {
+        this.timeLeft = timeLeft;
+        this.groupName = groupName;
+        this.stage = stage;
+        this.suggester = suggester;
+    }
+}
+
+class RoomState {
+    constructor(currentRound) {
+        this.currentRound = currentRound;
+    }
+}
+
 class Room {
-    constructor(code, role, players) {
+    constructor(code, role, status, players, state) {
         this.code = code;
         this.role = role;
+        this.status = status;
         this.players = players || [];
+        this.state = state;
     }
 }
 
@@ -46,6 +63,36 @@ export function getOrSetPlayerUuid() {
 class BackendClient {
     constructor(url) {
         this.url = url;
+    }
+
+    async submitGroup(code, groupId) {
+        return await fetch(`${this.url}/room/${code}/submit/group?user_uuid=${getOrSetPlayerUuid()}&group_id=${groupId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+        // TODO: update room store
+    }
+
+    async submitTrack(code, trackId) {
+        return await fetch(`${this.url}/room/${code}/submit/track?user_uuid=${getOrSetPlayerUuid()}&track_id=${trackId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+        // TODO: update room store
+    }
+
+    async skipTrack(code) {
+        return await fetch(`${this.url}/room/${code}/submit/track?user_uuid=${getOrSetPlayerUuid()}&track_id=${trackId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+        // TODO: update room store
     }
 
     async startGame(code) {
@@ -106,16 +153,75 @@ class BackendClient {
     }
 
     mapRoom(data) {
-        console.log('Mapping room', data);
         return new Room(
             data.code,
-            data.role === 'ADMIN' ? UserRole.ADMIN : UserRole.PLAYER,
-            data.players.map(player => new Player(
-                player.nickname,
-                player.score,
-                player.role === 'ADMIN' ? UserRole.ADMIN : UserRole.PLAYER
-            )),
+            this.mapRole(data.role),
+            this.mapStatus(data.status),
+            data.players.map(player => this.mapPlayer(player)),
+            this.mapState(data.game_state),
         );
+    }
+
+    mapState(data) {
+        if (!data) {
+            return null;
+        }
+
+        return new RoomState(
+            this.mapCurrentRound(data.current_round),
+        );
+    }
+
+    mapCurrentRound(data) {
+        if (!data) {
+            return null;
+        }
+
+        return new CurrentRound(
+            data.timeleft,
+            data.group_id,
+            this.mapStage(data.current_stage),
+            new Player(data.suggester.uuid, data.suggester.nickname, UserRole.PLAYER),
+        );
+    }
+
+    mapPlayer(data) {
+        return new Player(
+            data.uuid,
+            data.nickname,
+            this.mapRole(data.role),
+        );
+    }
+
+    mapRole(rawRole) {
+        switch (rawRole) {
+            case 'ADMIN':
+                return UserRole.ADMIN;
+            case 'PLAYER':
+                return UserRole.PLAYER;
+        }
+    }
+
+    mapStage(rawStage) {
+        switch (rawStage) {
+            case 'GROUP_SUGGESTION':
+                return RoundStage.GROUP_SUGGESTION;
+            case 'TRACKS_SUBMISSION':
+                return RoundStage.TRACKS_SUBMISSION;
+            case 'END_ROUND':
+                return RoundStage.END_ROUND;
+        }
+    }
+
+    mapStatus(rawStatus) {
+        switch (rawStatus) {
+            case 'NEW':
+                return RoomStatus.NEW;
+            case 'RUNNING':
+                return RoomStatus.RUNNING;
+            case 'FINISHED':
+                return RoomStatus.FINISHED;
+        }
     }
 }
 

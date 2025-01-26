@@ -1,12 +1,12 @@
 import * as React from 'react';
 
 export default function SuggesterSubmitTrack({room}) {
-    const groupName = room.state.currentRound.group.name;
+    const groupName = room.state.currentRound.groupName;
 
     return (
         <>
-            <small>You suggest {groupName}</small>
-            <small>Please wait your friends</small>
+            <div>You suggest {groupName}</div>
+            <div>Please wait your friends</div>
         </>
     );
 }

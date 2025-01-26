@@ -4,7 +4,7 @@ export default function SongerSuggestGroup({room}) {
     const suggester = room.state.currentRound.suggester;
     return (
         <>
-            <small>Game started. Please relax and enjoy till {suggester.nickname.toUpperCase()} suggest group</small>
+            <div>Game started. Please relax and enjoy till {suggester.nickname.toUpperCase()} suggest group</div>
         </>
     );
 }
