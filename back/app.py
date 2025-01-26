@@ -12,7 +12,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm.attributes import flag_modified
 
 import consts
-from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings
+from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings, RoomStatus
 from back.db.utils import dump_room
 from consts import ROOM_CODE_ALLOWED_CHARS
 
@@ -43,7 +43,8 @@ async def create_room(admin_uuid: str) -> dict[str, Any]:
         room = Room(
             pk=str(uuid4()),
             code=generate_room_code(4),
-            game_state={'is_active': True},
+            game_state={},
+            status=RoomStatus.NEW.value,
             created_by=user.pk,
         )
         session.add(room)
@@ -57,6 +58,8 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
     async with create_session() as session:
         if not (room := (await session.execute(room_stmt)).scalar()):
             raise HTTPException(status_code=404, detail="Room not found")
+        if room.status != RoomStatus.NEW:
+            raise HTTPException(status_code=400, detail="Room is not accepting new players")
 
         room_user_stmt = (
             select(RoomUser)
@@ -71,7 +74,7 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
     return Response(status_code=201, content={})
 
 
-@post("/room/{room_code:str}/user/{user_pk:str}/increment")
+@post("/room/{room_code:str}/user/{user_pk:str}/increment", deprecated=True)
 async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
     room_stmt = select(Room).where(Room.code == room_code).with_for_update()
     async with create_session() as session:
