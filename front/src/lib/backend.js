@@ -106,7 +106,7 @@ class BackendClient {
     }
 
     async nextTurn(code) {
-        return await fetch(`${this.url}/room/${code}/next_turn?user_uuid=${getOrSetPlayerUuid()}`, {
+        return await fetch(`${this.url}/room/${code}/next-round?user_uuid=${getOrSetPlayerUuid()}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

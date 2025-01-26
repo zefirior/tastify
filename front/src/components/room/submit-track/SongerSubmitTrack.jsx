@@ -19,14 +19,14 @@ export default function SongerSubmitTrack({room}) {
                     id="outlined-basic"
                     label="Outlined"
                     variant="outlined"
-                    value={groupName}
+                    value={trackName}
                     onChange={(e) => setTrackName(e.target.value)}
                 />
                 <Button
                     variant="contained"
                     color="primary"
                     onClick={() => {
-                        Client.submitTrack(room.code, trackName).then(r => console.group('submitted track'));
+                        Client.submitTrack(room.code, trackName).then(console.log);
                     }}
                 >
                     Suggest
@@ -36,7 +36,7 @@ export default function SongerSubmitTrack({room}) {
                     variant="contained"
                     color="error"
                     onClick={() => {
-                        Client.skipTrack(room.code).then(r => console.group('skipped track'));
+                        Client.skipTrack(room.code).then(console.log);
                     }}
                 >
                     <CloseIcon />
