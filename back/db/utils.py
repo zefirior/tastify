@@ -1,10 +1,15 @@
 from typing import Any
 
-from back.db.base import Room, RoomUser
+from back.db.base import Room, RoomUser, UserRole
 
 
 def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[str, Any]:
-    role = next((ru.role for ru in room_users if ru.user_uuid == user_uuid), None)
+    role = None
+    if room.created_by == user_uuid:
+        role = UserRole.ADMIN.value
+    elif room_user := next((ru for ru in room_users if ru.user_uuid == user_uuid), None):
+        role = room_user.role
+
     return {
         'code': room.code,
         'role': role,

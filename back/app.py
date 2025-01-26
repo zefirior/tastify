@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import Any
 from uuid import uuid4
@@ -6,6 +7,7 @@ from advanced_alchemy.extensions.litestar import SQLAlchemySerializationPlugin
 from litestar import Litestar, get, post, Request, Response, MediaType
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import HTTPException
+from litestar.logging import LoggingConfig
 from sqlalchemy import select, and_
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -15,23 +17,38 @@ from back.db.utils import dump_room
 from consts import ROOM_CODE_ALLOWED_CHARS
 
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger.addHandler(logging.StreamHandler())
+
+
 def generate_room_code(length):
     return ''.join(random.choices(ROOM_CODE_ALLOWED_CHARS, k=length))
 
 
+async def get_user(session, user_uuid: str) -> User:
+    user_stmt = select(User).where(User.pk == user_uuid)
+    if not (user := (await session.execute(user_stmt)).scalar()):
+        user = User(pk=user_uuid)
+        session.add(user)
+        await session.flush()
+    return user
+
+
 @post("/room")
 async def create_room(admin_uuid: str) -> dict[str, Any]:
-    user_stmt = select(User).where(User.pk == admin_uuid)
     async with create_session() as session:
-        if (await session.execute(user_stmt)).scalar():
-            raise HTTPException(status_code=400, detail="User already exists")
+        user = await get_user(session, admin_uuid)
 
-        user = User(pk=admin_uuid)
-        room = Room(pk=str(uuid4()), code=generate_room_code(4), game_state={'is_active': True})
-        room_user = RoomUser(nickname='admin', role=UserRole.ADMIN.value, user_uuid=admin_uuid, room_uuid=room.pk)
-        session.add_all([room_user, room, user])
+        room = Room(
+            pk=str(uuid4()),
+            code=generate_room_code(4),
+            game_state={'is_active': True},
+            created_by=user.pk,
+        )
+        session.add(room)
 
-    return dump_room(admin_uuid, room, [room_user])
+    return dump_room(admin_uuid, room, [])
 
 
 @post("/room/{room_code:str}/join")
@@ -48,9 +65,8 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
         if (await session.execute(room_user_stmt)).scalar():
             raise HTTPException(status_code=400, detail="Nickname already taken")
 
-        user = User(pk=user_uuid)
-        session.add(user)
-        room_user = RoomUser(nickname=nickname, role=UserRole.PLAYER.value, user_uuid=user_uuid, room_uuid=room.pk)
+        user = await get_user(session, user_uuid)
+        room_user = RoomUser(nickname=nickname, role=UserRole.PLAYER.value, user_uuid=user.pk, room_uuid=room.pk)
         session.add(room_user)
     return Response(status_code=201, content={})
 
@@ -102,6 +118,14 @@ def plain_text_exception_handler(_: Request, exc: Exception) -> Response:
     )
 
 
+logging_config = LoggingConfig(
+    root={"level": "INFO", "handlers": ["queue_listener"]},
+    formatters={
+        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
+    },
+    log_exceptions="always",
+)
+
 settings = DBSettings()
 settings.setup()
 app = Litestar(
@@ -109,4 +133,5 @@ app = Litestar(
     plugins=[SQLAlchemySerializationPlugin()],
     exception_handlers={HTTPException: plain_text_exception_handler},
     cors_config=CORSConfig(allow_origins=consts.ALLOW_ORIGINS),
+    logging_config=logging_config,
 )
