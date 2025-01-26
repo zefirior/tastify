@@ -2,6 +2,7 @@ import string
 
 ROOM_CODE_LENGTH = 4
 ROOM_CODE_ALLOWED_CHARS = string.ascii_uppercase + string.digits
+ROUND_DURATION_SEC = 60
 
 ALLOW_ORIGINS = [
     "http://tastify.zefirior.com",

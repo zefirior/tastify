@@ -48,7 +48,7 @@ async def create_room(admin_uuid: str) -> dict[str, Any]:
         )
         session.add(room)
 
-    return dump_room(admin_uuid, room, [])
+        return dump_room(admin_uuid, room, [])
 
 
 @post("/room/{room_code:str}/join")
@@ -105,7 +105,7 @@ async def get_game(room_code: str, user_uuid: str) -> dict:
         result = await session.execute(room_user_stmt)
         room_users = [item[0] for item in result.all()]
 
-    return dump_room(user_uuid, room, room_users)
+        return dump_room(user_uuid, room, room_users)
 
 
 def plain_text_exception_handler(_: Request, exc: Exception) -> Response:
