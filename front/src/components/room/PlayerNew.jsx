@@ -1,10 +1,9 @@
-import Client from '../lib/backend.js';
+import Client from '../../lib/backend.js';
 import Button from '@mui/material/Button';
 import * as React from 'react';
-import PlayersGrid from './PlayersGrid.jsx';
-import {v4 as uuidv4} from 'uuid';
+import PlayersGrid from '../PlayersGrid.jsx';
 
-export default function PlayerBoard({room}) {
+export default function PlayerNew({room}) {
 
     function increment() {
         console.log('increment');

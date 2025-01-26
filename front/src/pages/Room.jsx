@@ -1,12 +1,14 @@
 import '../App.css';
 import Page from './Page.jsx';
-import {useParams} from 'react-router';
+import {useNavigate, useParams} from 'react-router';
 import {useContext, useEffect, useRef} from 'react';
 import { observer } from "mobx-react";
-import Client, {UserRole} from '../lib/backend.js';
+import Client, {RoomStatus, UserRole} from '../lib/backend.js';
 import {RoomStoreContext} from '../stores/room.js';
-import PlayerBoard from '../components/PlayerBoard.jsx';
-import Dashboard from '../components/Dashboard.jsx';
+import PlayerNew from '../components/room/PlayerNew.jsx';
+import DashNew from '../components/room/DashNew.jsx';
+import DashCommon from '../components/room/DashCommon.jsx';
+import PlayerCommon from '../components/room/PlayerCommon.jsx';
 
 const Room = observer(() => {
     const {roomCode} = useParams();
@@ -44,11 +46,17 @@ const Room = observer(() => {
     }
     const room = store.getRoom();
     console.log('Rendering room', room);
+
+    const navigate = useNavigate();
+    if (room.status === RoomStatus.FINISHED) {
+        return navigate('/');
+    }
+
     return (
         <Page>
             {room.role === UserRole.ADMIN
-                ? <Dashboard room={room} />
-                : <PlayerBoard room={room} />}
+                ? <DashCommon room={room} />
+                : <PlayerCommon room={room} />}
         </Page>
     );
 });

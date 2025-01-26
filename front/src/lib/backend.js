@@ -5,6 +5,18 @@ export const UserRole = Object.freeze({
     PLAYER:  Symbol("PLAYER"),
 });
 
+export const RoundStage = Object.freeze({
+    GROUP_SUGGESTION:   Symbol("GROUP_SUGGESTION"),
+    TRACKS_SUBMISSION:  Symbol("TRACKS_SUBMISSION"),
+    END_ROUND:  Symbol("END_ROUND"),
+});
+
+export const RoomStatus = Object.freeze({
+    NEW:       Symbol("NEW"),
+    RUNNING:   Symbol("RUNNING"),
+    FINISHED:  Symbol("FINISHED"),
+});
+
 class Player {
     constructor(nickname, score, role) {
         this.nickname = nickname;
@@ -21,7 +33,7 @@ class Room {
     }
 }
 
-function getOrSetPlayerUuid() {
+export function getOrSetPlayerUuid() {
     const playerUuid = localStorage.getItem('playerUuid');
     if (playerUuid) {
         return playerUuid;
@@ -34,6 +46,26 @@ function getOrSetPlayerUuid() {
 class BackendClient {
     constructor(url) {
         this.url = url;
+    }
+
+    async startGame(code) {
+        return await fetch(`${this.url}/room/${code}/start?user_uuid=${getOrSetPlayerUuid()}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+        // TODO: update room store
+    }
+
+    async nextTurn(code) {
+        return await fetch(`${this.url}/room/${code}/next_turn?user_uuid=${getOrSetPlayerUuid()}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+        // TODO: update room store
     }
 
     async increment(code) {
