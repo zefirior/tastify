@@ -74,6 +74,7 @@ async def join_room(room_code: str, nickname: str, user_uuid: str) -> Response:
 @post("/room/{room_code:str}/user/{user_pk:str}/increment")
 async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
     room_stmt = select(Room).where(Room.code == room_code).with_for_update()
+
     async with create_session() as session:
         if not (room := (await session.execute(room_stmt)).scalar()):
             raise HTTPException(status_code=404, detail="Room not found")
@@ -93,11 +94,11 @@ async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
     return room.game_state
 
 
-@get("/room/{room_code: str}")
-async def get_game(room_code: str, user_uuid: str) -> dict:
+@get("/room/{room_code:str}")
+async def get_game(room_code: str, user_uuid: str) -> dict[str, Any]:
     room_stmt = select(Room).where(Room.code == room_code)
-
     room_user_stmt = select(RoomUser).join(Room).where(and_(Room.code == room_code))
+
     async with create_session() as session:
         if not (room := (await session.execute(room_stmt)).scalar()):
             raise HTTPException(status_code=404, detail="Room not found")

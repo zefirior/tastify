@@ -73,7 +73,7 @@ class RoomUser(Base):
     )
 
 
-async def create_all(engine: AsyncEngine, drop: bool = False):
+async def _create_all(engine: AsyncEngine, drop: bool = False):
     async with engine.begin() as conn:
         if drop:
             await conn.run_sync(Base.metadata.drop_all)
@@ -83,18 +83,19 @@ async def create_all(engine: AsyncEngine, drop: bool = False):
 async def _main():
     settings = DBSettings(echo=True)
     engine = settings.setup()
-    await create_all(engine, drop=True)
+    await _create_all(engine, drop=True)
+
+    room_code = '1234'
+    room_stmt = select(Room).where(Room.code == room_code)
     async with create_session() as session:
-        room_code = '1234'
-        room_stmt = select(Room).where(Room.code == room_code).with_for_update()
         if not (room := (await session.execute(room_stmt)).scalar()):
             user = User(pk=str(uuid4()))
             session.add(user)
             await session.flush()
-            room = Room(code='1234', game_state={}, created_by=user.pk)
+            room = Room(code=room_code, game_state={'is_active': True}, created_by=user.pk)
             session.add(room)
             await session.flush()
-        print(room.pk)
+        print(f'{room.pk = }')
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-version: '2'
+version: '3.9'
 services:
   db:
     image: postgres:15
@@ -10,6 +10,11 @@ services:
       - "5432:5432"
     expose:
       - "5432"
+    healthcheck:
+      test: "psql -U postgres -c 'select 1'"
+      interval: 0.5s
+      timeout: 30s
+      retries: 10
 
   migrate:
     build:
@@ -18,7 +23,8 @@ services:
     environment:
       DB_URL: "postgresql+asyncpg://postgres@db:5432/postgres"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ../back:/back:ro
     entrypoint: [python, db/base.py]
@@ -30,14 +36,21 @@ services:
     environment:
       DB_URL: "postgresql+asyncpg://postgres@db:5432/postgres"
     depends_on:
-      - db
-      - migrate
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - ../back:/back:ro
     ports:
       - "8000:8000"
     expose:
       - "8000"
+    healthcheck:
+      test: "python3 -c \"import httpx; exit(httpx.get('http://localhost:8000/schema/swagger').status_code != 200)\""
+      interval: 0.5s
+      timeout: 5s
+      retries: 10
 
   front:
     container_name: "front"

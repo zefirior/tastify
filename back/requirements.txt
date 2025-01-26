@@ -1,6 +1,6 @@
 litestar[standard,sqlalchemy]==2.14.0
 sqlalchemy[asyncio]
-pydantic==2.7.0
+pydantic==2.10.6
 pydantic-settings==2.7.1
 psycopg2==2.9.10
 asyncpg==0.30.0
