@@ -75,6 +75,7 @@ class Room(Base):
     game_state: Mapped[dict[str, Any]] = mapped_column(type_=JSON, nullable=False)
     created_by: Mapped[UUID] = mapped_column(ForeignKey(User.pk), nullable=False)
     status: Mapped[str] = mapped_column(nullable=False, default=RoomStatus.NEW.value)
+    total_rounds: Mapped[int] = mapped_column(nullable=True)
 
     rounds: Mapped[list['Round']] = relationship('Round', lazy='joined', back_populates='room', uselist=True, order_by=lambda: Round.number)
 

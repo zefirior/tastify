@@ -34,7 +34,7 @@ def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[st
 
     total_results = defaultdict(int)
     for r in room.rounds:
-        for player, score in r.results.items():
+        for player, score in (r.results or {}).items():
             total_results[player] += score
 
     return {
@@ -45,13 +45,12 @@ def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[st
             {
                 'uuid': room_user.user_uuid,
                 'nickname': room_user.nickname,
-                'score': room.game_state.get('points', {}).get(room_user.user_uuid, 0),
                 'role': room_user.role,
             }
             for room_user in room_users
         ],
         'game_state': {
-            'rounds': 0,  # todo put actual number of total rounds in the game
+            'rounds': room.total_rounds,
             'current_round': current_round,
             'total_results': total_results,
         },

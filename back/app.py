@@ -12,7 +12,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm.attributes import flag_modified
 
 import consts
-from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings, RoomStatus
+from back.db.base import create_session, Room, User, UserRole, RoomUser, DBSettings, RoomStatus, Round, RoundStages
 from back.db.utils import dump_room, acquire_advisory_lock
 from consts import ROOM_CODE_ALLOWED_CHARS
 from spotify import spotify_api
@@ -40,6 +40,12 @@ async def get_or_404_room(session, room_code: str) -> Room:
     if not (room := (await session.execute(room_stmt)).scalar()):
         raise HTTPException(status_code=404, detail="Room not found")
     return room
+
+
+async def get_room_users(session, room_code) -> list[RoomUser]:
+    room_user_stmt = select(RoomUser).join(Room).where(Room.code == room_code).order_by(RoomUser.user_uuid)
+    room_users_result = await session.execute(room_user_stmt)
+    return [item[0] for item in room_users_result.all()]
 
 
 @post("/room")
@@ -102,17 +108,12 @@ async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
 
 @get("/room/{room_code:str}")
 async def get_game(room_code: str, user_uuid: str) -> dict:
-    room_user_stmt = select(RoomUser).join(Room).where(and_(Room.code == room_code))
     async with create_session() as session:
         room = await get_or_404_room(session, room_code)
         if room.created_by == user_uuid:
             await acquire_advisory_lock(session, room)
-            for rnd in room.rounds:
-                await acquire_advisory_lock(session, rnd)
 
-        room_users_result = await session.execute(room_user_stmt)
-        room_users = [item[0] for item in room_users_result.all()]
-
+        room_users = await get_room_users(session, room_code)
         return dump_room(user_uuid, room, room_users)
 
 
@@ -122,12 +123,28 @@ async def start_game(room_code: str, user_uuid: str) -> Response:
         room = await get_or_404_room(session, room_code)
         if room.created_by != user_uuid:
             raise HTTPException(status_code=403, detail="Only admin can start the game")
+        await acquire_advisory_lock(session, room)
+
+        if not (room_users := await get_room_users(session, room_code)):
+            raise HTTPException(status_code=404, detail="Cannot start room without players")
+
         if room.status != RoomStatus.NEW:
             raise HTTPException(
                 status_code=400,
                 detail=f"Room should be in {RoomStatus.NEW} state, got {room.status} instead",
             )
         room.status = RoomStatus.RUNNING
+        room.total_rounds = len(room_users)
+
+        first_round = Round(
+            room_uuid=room.pk,
+            suggester_uuid=room_users[0].pk,
+            number=1,
+            submissions={},
+            current_stage=RoundStages.GROUP_SUGGESTION,
+        )
+        session.add(first_round)
+
     return Response(status_code=200, content={})
 
 
