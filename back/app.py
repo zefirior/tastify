@@ -15,7 +15,7 @@ import consts
 from back.db.base import create_session, Room, UserRole, RoomUser, DBSettings, RoomStatus, RoundStages
 from back.db.utils import dump_room
 from back.db.query_utils import get_or_create_user, get_or_404_room, get_room_users, get_room, get_last_round, \
-    create_round, acquire_advisory_lock
+    create_round, acquire_advisory_lock, end_round
 from consts import ROOM_CODE_ALLOWED_CHARS
 from spotify import spotify_api
 
@@ -42,7 +42,7 @@ async def create_room(admin_uuid: str) -> dict[str, Any]:
         )
         session.add(room)
 
-        return dump_room(admin_uuid, room, [])
+        return await dump_room(session, admin_uuid, room, [])
 
 
 @post("/room/{room_code:str}/join")
@@ -92,11 +92,8 @@ async def increase_points(room_code: str, user_pk: str) -> dict[str, Any]:
 async def get_game(room_code: str, user_uuid: str) -> dict:
     async with create_session() as session:
         room = await get_or_404_room(session, room_code)
-        if room.created_by == user_uuid:
-            await acquire_advisory_lock(session, room)
-
         room_users = await get_room_users(session, room_code)
-        return dump_room(user_uuid, room, room_users)
+        return await dump_room(session, user_uuid, room, room_users)
 
 
 @post("/room/{room_code:str}/start")
@@ -122,6 +119,7 @@ async def start_game(room_code: str, user_uuid: str) -> Response:
             room_uuid=room.pk,
             suggester_uuid=room_users[0].pk,
             number=1,
+            room_users=room_users,
         )
 
     return Response(status_code=200, content={})
@@ -176,14 +174,7 @@ async def submit_track(room_code: str, user_uuid: str, track_id: str | None = No
 
         players = await get_room_users(session, room_code)
         if len(current_round.submissions) == len(players) - 1:
-            current_round.results[current_round.suggester.user_uuid] = 0
-            current_round.current_stage = RoundStages.END_ROUND
-            for player_uuid, track_id in current_round.submissions.items():
-                if not track_id:
-                    continue
-                current_round.results[player_uuid] = 1
-                current_round.results[current_round.suggester.user_uuid] += 1
-            flag_modified(current_round, "results")
+            await end_round(current_round)
 
     return Response(status_code=200, content={})
 
@@ -214,6 +205,7 @@ async def next_round(room_code: str, user_uuid: str) -> Response:
                 room_uuid=room.pk,
                 suggester_uuid=room_users[previous_round.number].pk,
                 number=previous_round.number + 1,
+                room_users=room_users,
             )
 
     return Response(status_code=200, content={})

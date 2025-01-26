@@ -1,5 +1,6 @@
 from litestar.exceptions import HTTPException
 from sqlalchemy import select, func, sql
+from sqlalchemy.orm.attributes import flag_modified
 
 from back.db.base import User, Room, RoomUser, RoomStatus, Round, RoundStages
 
@@ -76,6 +77,7 @@ async def create_round(
     room_uuid: str,
     suggester_uuid: str,
     number: int,
+    room_users: list[RoomUser],
 ):
     new_round = Round(
         room_uuid=room_uuid,
@@ -83,9 +85,19 @@ async def create_round(
         number=number,
         submissions={},
         current_stage=RoundStages.GROUP_SUGGESTION,
-        results={},
+        results={u.user_uuid: 0 for u in room_users},
     )
     session.add(new_round)
+
+
+async def end_round(rnd: Round) -> None:
+    rnd.current_stage = RoundStages.END_ROUND
+    for player_uuid, track_id in rnd.submissions.items():
+        if not track_id:
+            continue
+        rnd.results[player_uuid] += 1
+        rnd.results[rnd.suggester.user_uuid] += 1
+    flag_modified(rnd, "results")
 
 
 async def acquire_advisory_lock(session, obj) -> None:
