@@ -35,8 +35,9 @@ class CurrentRound {
 }
 
 class RoomState {
-    constructor(currentRound) {
+    constructor(currentRound, totalResults) {
         this.currentRound = currentRound;
+        this.totalResults = totalResults;
     }
 }
 
@@ -47,6 +48,16 @@ class Room {
         this.status = status;
         this.players = players || [];
         this.state = state;
+    }
+
+    getPlayerScore(playerUuid) {
+        if (!this.state) {
+            return 0;
+        }
+        if (!this.state.totalResults) {
+            return 0;
+        }
+        return this.state.totalResults[playerUuid] || 0;
     }
 }
 
@@ -169,6 +180,7 @@ class BackendClient {
 
         return new RoomState(
             this.mapCurrentRound(data.current_round),
+            data.total_results,
         );
     }
 

@@ -7,6 +7,8 @@ import SongerSuggestGroup from './suggest-group/SongerSuggestGroup.jsx';
 import SongerSubmitTrack from './submit-track/SongerSubmitTrack.jsx';
 import SongerEndRound from './end-round/SongerEndRound.jsx';
 import PlayerNew from './PlayerNew.jsx';
+import PlayersGrid from '../PlayersGrid.jsx';
+import * as React from 'react';
 
 export default function PlayerCommon({room}) {
     if (room.status === RoomStatus.NEW) {
@@ -38,8 +40,12 @@ export default function PlayerCommon({room}) {
         }
     }
 
+    const timeLeft = room.state.currentRound.timeLeft;
+
     return (
         <Page>
+            <PlayersGrid room={room} />
+            <big>Time left: {timeLeft} sec</big>
             {chooseView()}
         </Page>
     );

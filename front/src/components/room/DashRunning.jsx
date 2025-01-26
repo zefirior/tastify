@@ -22,11 +22,14 @@ export default function DashRunning({room}) {
             break;
     }
 
+    const timeLeft = room.state.currentRound.timeLeft;
+
     return (
         <>
             <h1>Game dashboard: {room.code}</h1>
+            <big>Time left: {timeLeft} sec</big>
+            <PlayersGrid room={room} />
             {dashView}
-            <PlayersGrid players={room.players} />
         </>
     );
 }

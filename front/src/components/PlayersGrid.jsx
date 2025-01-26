@@ -9,7 +9,8 @@ import {
     TableRow
 } from '@mui/material';
 
-export default function PlayersGrid({players}) {
+export default function PlayersGrid({room}) {
+    const players = room.players;
 
     return (
         <TableContainer component={Paper}>
@@ -29,7 +30,7 @@ export default function PlayersGrid({players}) {
                             <TableCell component="th" scope="row">
                                 {player.nickname}
                             </TableCell>
-                            <TableCell align="right">{player.score}</TableCell>
+                            <TableCell align="right">{room.getPlayerScore(player.uuid)}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

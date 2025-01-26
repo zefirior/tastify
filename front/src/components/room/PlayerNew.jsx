@@ -15,7 +15,7 @@ export default function PlayerNew({room}) {
     return (
         <>
             <h1>Your game: {room.code}</h1>
-            <PlayersGrid players={room.players} />
+            <PlayersGrid room={room} />
             <Button
                 variant="contained"
                 color="primary"
