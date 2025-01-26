@@ -8,7 +8,7 @@ from litestar import Litestar, get, post, Request, Response, MediaType
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import HTTPException
 from litestar.logging import LoggingConfig
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
 import consts
@@ -125,8 +125,9 @@ async def start_game(room_code: str, user_uuid: str) -> Response:
             raise HTTPException(status_code=403, detail="Only admin can start the game")
         await acquire_advisory_lock(session, room)
 
-        if not (room_users := await get_room_users(session, room_code)):
-            raise HTTPException(status_code=404, detail="Cannot start room without players")
+        room_users = await get_room_users(session, room_code)
+        if len(room_users) < 2:
+            raise HTTPException(status_code=404, detail="Need at least two players to start the game")
 
         if room.status != RoomStatus.NEW:
             raise HTTPException(
@@ -142,6 +143,7 @@ async def start_game(room_code: str, user_uuid: str) -> Response:
             number=1,
             submissions={},
             current_stage=RoundStages.GROUP_SUGGESTION,
+            results={},
         )
         session.add(first_round)
 
@@ -150,12 +152,61 @@ async def start_game(room_code: str, user_uuid: str) -> Response:
 
 @post("/room/{room_code:str}/submit/group")
 async def submit_group(room_code: str, user_uuid: str, group_id: str) -> Response:
-    pass
+    async with create_session() as session:
+        room = await get_or_404_room(session, room_code)
+        if room.status != RoomStatus.RUNNING:
+            raise HTTPException(status_code=400, detail="Room is not running")
+        if room.created_by == user_uuid:
+            raise HTTPException(status_code=403, detail="Only suggester can submit group")
+        if not room.rounds:
+            raise RuntimeError("Unreachable")
+        await acquire_advisory_lock(session, room)
+
+        current_round: Round = room.rounds[-1]  # type: ignore
+        if current_round.suggester.user_uuid != user_uuid:
+            raise HTTPException(status_code=403, detail="Only suggester can submit group")
+        if current_round.current_stage != RoundStages.GROUP_SUGGESTION:
+            raise HTTPException(status_code=400, detail="Invalid round stage")
+        current_round.group_id = group_id
+        current_round.current_stage = RoundStages.TRACKS_SUBMISSION
+
+    return Response(status_code=200, content={})
 
 
 @post("/room/{room_code:str}/submit/track")
-async def submit_track(room_code: str, user_uuid: str, track_id: str) -> Response:
-    pass
+async def submit_track(room_code: str, user_uuid: str, track_id: str | None = None) -> Response:
+    async with create_session() as session:
+        room = await get_or_404_room(session, room_code)
+        if room.status != RoomStatus.RUNNING:
+            raise HTTPException(status_code=400, detail="Room is not running")
+        if room.created_by == user_uuid:
+            raise HTTPException(status_code=403, detail="Admin cannot submit tracks")
+        if not room.rounds:
+            raise RuntimeError("Unreachable")
+        await acquire_advisory_lock(session, room)
+
+        current_round: Round = room.rounds[-1]  # type: ignore
+        if current_round.suggester.user_uuid == user_uuid:
+            raise HTTPException(status_code=403, detail="Suggester cannot submit tracks")
+        if current_round.current_stage != RoundStages.TRACKS_SUBMISSION:
+            raise HTTPException(status_code=400, detail="Invalid round stage")
+        if user_uuid in current_round.submissions:
+            raise HTTPException(status_code=400, detail="User already submitted")
+        current_round.submissions[user_uuid] = track_id
+        flag_modified(current_round, "submissions")
+
+        players = await get_room_users(session, room_code)
+        if len(current_round.submissions) == len(players) - 1:
+            current_round.results[current_round.suggester.user_uuid] = 0
+            current_round.current_stage = RoundStages.END_ROUND
+            for player_uuid, track_id in current_round.submissions.items():
+                if not track_id:
+                    continue
+                current_round.results[player_uuid] = 1
+                current_round.results[current_round.suggester.user_uuid] += 1
+            flag_modified(current_round, "results")
+
+    return Response(status_code=200, content={})
 
 
 @post("/room/{room_code:str}/next-round")

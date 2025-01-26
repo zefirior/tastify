@@ -17,9 +17,11 @@ def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[st
 
     if room.rounds:
         cur: Round = room.rounds[-1]  # type: ignore
+        if (timeleft := (cur.started_at - get_utc_now()).total_seconds() + ROUND_DURATION_SEC) < 0:
+            timeleft = 0
         current_round = {
             'number': cur.number,
-            'timeleft': (get_utc_now() - cur.started_at).total_seconds() + ROUND_DURATION_SEC,
+            'timeleft': timeleft,
             'group_id': cur.group_id,
             'submissions': cur.submissions,
             'current_stage': cur.current_stage,
