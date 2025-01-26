@@ -24,7 +24,7 @@ const Room = observer(() => {
                 } catch (error) {
                     console.error(error.message);
                 }
-            }, 1000); // Poll every 1 seconds
+            }, 250); // Poll every 0.25 seconds
         };
         startPolling();
 
