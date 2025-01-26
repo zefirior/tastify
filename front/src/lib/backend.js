@@ -86,7 +86,7 @@ class BackendClient {
     }
 
     async skipTrack(code) {
-        return await fetch(`${this.url}/room/${code}/submit/track?user_uuid=${getOrSetPlayerUuid()}&track_id=${trackId}`, {
+        return await fetch(`${this.url}/room/${code}/submit/track?user_uuid=${getOrSetPlayerUuid()}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
