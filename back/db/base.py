@@ -46,15 +46,16 @@ class Base(DeclarativeBase):
     pk: Mapped[str] = mapped_column(primary_key=True, default=lambda: str(uuid4()))
 
 
+class User(Base):
+    __tablename__ = "user"
+
+
 class Room(Base):
     __tablename__ = "room"
 
     code: Mapped[str] = mapped_column(nullable=False, unique=True)
     game_state: Mapped[dict[str, Any]] = mapped_column(type_=JSON, nullable=False)
-
-
-class User(Base):
-    __tablename__ = "user"
+    created_by: Mapped[UUID] = mapped_column(ForeignKey(User.pk), nullable=False)
 
 
 class RoomUser(Base):
@@ -87,7 +88,10 @@ async def _main():
         room_code = '1234'
         room_stmt = select(Room).where(Room.code == room_code).with_for_update()
         if not (room := (await session.execute(room_stmt)).scalar()):
-            room = Room(code='1234', game_state={})
+            user = User(pk=str(uuid4()))
+            session.add(user)
+            await session.flush()
+            room = Room(code='1234', game_state={}, created_by=user.pk)
             session.add(room)
             await session.flush()
         print(room.pk)

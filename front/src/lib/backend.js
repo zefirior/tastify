@@ -36,10 +36,9 @@ class BackendClient {
         this.url = url;
     }
 
-    async increment(code, playerUuid) {
+    async increment(code) {
         return await fetch(`${this.url}/room/${code}/user/${getOrSetPlayerUuid()}/increment`, {
             method: 'POST',
-            body: JSON.stringify({player_uuid: playerUuid}),
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -48,10 +47,7 @@ class BackendClient {
     }
 
     async joinRoom(code, nickname) {
-        const url = `${this.url}/room/${code}/join?` + new URLSearchParams({
-            user_uuid: getOrSetPlayerUuid(),
-            nickname: nickname,
-        }.toString());
+        const url = `${this.url}/room/${code}/join?user_uuid=${getOrSetPlayerUuid()}&nickname=${nickname}`;
         return await fetch(url,
             {
                 method: 'POST',
@@ -69,7 +65,7 @@ class BackendClient {
     }
 
     async createRoom() {
-        return await fetch(`${this.url}/room`, {
+        return await fetch(`${this.url}/room?admin_uuid=${getOrSetPlayerUuid()}`, {
             method: 'POST',
         })
             .then(response => response.json())
@@ -78,6 +74,7 @@ class BackendClient {
     }
 
     mapRoom(data) {
+        console.log('Mapping room', data);
         return new Room(
             data.code,
             data.role === 'ADMIN' ? UserRole.ADMIN : UserRole.PLAYER,

@@ -10,7 +10,8 @@
 
 ## Run app locally in docker
 ```bash
-docker compose --file ./docker/local.docker-compose.yaml up
+docker compose --file ./docker/local.docker-compose.yaml up -d
+open http://localhost:3000
 ```
 
 ## Deploying the App

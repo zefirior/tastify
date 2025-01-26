@@ -23,7 +23,7 @@ export default function ChooseGame(props) {
 
     function joinRoom() {
         console.log('join room');
-        Client.joinRoom().then(() => {
+        Client.joinRoom(roomCode, playerName).then(() => {
             console.log('joined room', roomCode);
             navigate(`/room/${roomCode}`);
         });

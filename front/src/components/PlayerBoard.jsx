@@ -8,7 +8,7 @@ export default function PlayerBoard({room}) {
 
     function increment() {
         console.log('increment');
-        Client.increment(room.code, getOrSetPlayerUuid()).then((room) => {
+        Client.increment(room.code).then((room) => {
             console.log('incremented', room);
         });
     }

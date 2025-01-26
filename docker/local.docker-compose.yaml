@@ -19,6 +19,8 @@ services:
       DB_URL: "postgresql+asyncpg://postgres@db:5432/postgres"
     depends_on:
       - db
+    volumes:
+      - ../back:/back:ro
     entrypoint: [python, db/base.py]
 
   back:
@@ -30,6 +32,8 @@ services:
     depends_on:
       - db
       - migrate
+    volumes:
+      - ../back:/back:ro
     ports:
       - "8000:8000"
     expose:
@@ -44,6 +48,8 @@ services:
       - back
     ports:
     - "3000:3000"
+    volumes:
+      - ../front/src:/app/src:ro
     command:
       - npm
       - run
