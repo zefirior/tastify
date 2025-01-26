@@ -2,6 +2,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import func, sql
+
 from back.consts import ROUND_DURATION_SEC
 from back.db.base import Room, RoomUser, UserRole, Round
 
@@ -59,3 +61,9 @@ def dump_room(user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[st
 def get_utc_now():
     dt = datetime.now(timezone.utc)
     return dt.replace(tzinfo=timezone.utc)
+
+
+async def acquire_advisory_lock(session, obj) -> None:
+    key = func.hashtext(func.concat(obj.__tablename__, ':', obj.pk))
+    await session.execute(sql.select(func.pg_advisory_lock(key)))
+    await session.refresh(obj)
