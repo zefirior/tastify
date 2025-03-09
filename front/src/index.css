@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -13,13 +15,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.maim-content {
+.main-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  padding: 8em;
 }
 
 .input-label {
@@ -44,6 +44,7 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: darkblue;
 }
 
 h1 {
