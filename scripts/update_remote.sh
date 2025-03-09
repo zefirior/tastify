@@ -2,10 +2,6 @@
 
 set -e
 
-cd tastify
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-git fetch
-git reset --hard origin/liinda/persist-db-volumes-on-remote
-
-docker compose --file ./docker/remote.docker-compose.yaml stop
-docker compose --file ./docker/remote.docker-compose.yaml up --build -d
+sed "s|BRANCH_NAME|$(git branch --show-current)|g" $SCRIPT_DIR/update_remote.sh.tpl | ssh tastify "bash -s"

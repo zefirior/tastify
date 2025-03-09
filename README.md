@@ -17,7 +17,7 @@ open http://localhost:5173
 ## Deploying the App
 Update remote through ssh
 ```bash
-ssh tastify "bash -s" < ./scripts/update_remote.sh
+bash ./scripts/update_remote.sh
 ```
 
 ## Test
