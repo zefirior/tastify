@@ -3,7 +3,6 @@ import random
 from typing import Any
 from uuid import uuid4
 
-from advanced_alchemy.extensions.litestar import SQLAlchemySerializationPlugin
 from litestar import Litestar, get, post, Request, Response, MediaType
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import HTTPException
@@ -267,7 +266,6 @@ settings = DBSettings()
 settings.setup()
 app = Litestar(
     [create_room, join_room, increase_points, get_game, start_game, submit_group, submit_track, next_round, search_groups, search_tracks],
-    plugins=[SQLAlchemySerializationPlugin()],
     exception_handlers={HTTPException: plain_text_exception_handler},
     cors_config=CORSConfig(allow_origins=consts.ALLOW_ORIGINS),
     logging_config=logging_config,
