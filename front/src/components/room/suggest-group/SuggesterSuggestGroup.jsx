@@ -12,7 +12,7 @@ export default function SuggesterSuggestGroup({room}) {
 
     return (
         <>
-            <div>The round has started. Please suggest a group</div>
+            <div>The round has started. It&#39;s you turn to suggest a group!</div>
 
             <SearchForm
                 textPrefix=""
