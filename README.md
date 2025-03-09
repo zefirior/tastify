@@ -6,16 +6,26 @@
  * /scripts - common scripts (deploy/tests...)
 
 ## Links
- * [notion](https://www.notion.so/Tastify-1778e2cd4ea98093a2e5d30b602115f6)
+ * [notion](https://www.notion.so/GameThingsDone-1a58e2cd4ea9807483b1d2e46b4e3361)
 
 ## Run app locally in docker
 ```bash
 docker compose --file ./docker/local.docker-compose.yaml up -d --build && sleep 1
-open http://localhost:3000
+open http://localhost:5173
 ```
 
 ## Deploying the App
 Update remote through ssh
 ```bash
-ssh tastify "bash -s" < ./scripts/update_remote.sh
+ssh gametd "bash -s" < ./scripts/update_remote.sh
+```
+
+## Test
+1. Install requirements
+```bash
+bash ./scripts/local-install.sh
+```
+2. Run tests
+```bash
+pytest back
 ```

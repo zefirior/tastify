@@ -11,13 +11,13 @@ from litestar.logging import LoggingConfig
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
-import consts
+from back import consts
 from back.db.base import create_session, Room, UserRole, RoomUser, DBSettings, RoomStatus, RoundStages
 from back.db.utils import dump_room
 from back.db.query_utils import get_or_create_user, get_or_404_room, get_room_users, get_room, get_last_round, \
     create_round, acquire_advisory_lock, end_round
-from consts import ROOM_CODE_ALLOWED_CHARS
-from spotify import spotify_api
+from back.consts import ROOM_CODE_ALLOWED_CHARS
+from back.spotify import spotify_api
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

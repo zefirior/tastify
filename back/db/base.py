@@ -43,8 +43,8 @@ class DBSettings(BaseSettings):
 
 
 @asynccontextmanager
-async def create_session():
-    session = Session()
+async def create_session(sessionmaker=None):
+    session = (sessionmaker or Session)()
     try:
         yield session
         await session.commit()

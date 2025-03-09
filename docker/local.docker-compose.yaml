@@ -60,7 +60,7 @@ services:
     depends_on:
       - back
     ports:
-    - "3000:3000"
+    - "5173:5173"
     volumes:
       - ../front/src:/app/src:ro
     command:
