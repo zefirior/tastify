@@ -5,8 +5,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic_settings import BaseSettings
-from sqlalchemy import JSON, ForeignKey, UniqueConstraint, select, BIGINT, DateTime, text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker
+from sqlalchemy import BIGINT, JSON, DateTime, ForeignKey, UniqueConstraint, select, text
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 Session = async_sessionmaker(expire_on_commit=False)
@@ -65,11 +65,11 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    __tablename__ = "user"
+    __tablename__ = 'user'
 
 
 class Room(Base):
-    __tablename__ = "room"
+    __tablename__ = 'room'
 
     code: Mapped[str] = mapped_column(nullable=False, unique=True)
     game_state: Mapped[dict[str, Any]] = mapped_column(type_=JSON, nullable=False)
@@ -77,11 +77,13 @@ class Room(Base):
     status: Mapped[str] = mapped_column(nullable=False, default=RoomStatus.NEW.value)
     total_rounds: Mapped[int] = mapped_column(nullable=True)
 
-    rounds: Mapped[list['Round']] = relationship('Round', lazy='joined', back_populates='room', uselist=True, order_by=lambda: Round.number)
+    rounds: Mapped[list['Round']] = relationship(
+        'Round', lazy='joined', back_populates='room', uselist=True, order_by=lambda: Round.number
+    )
 
 
 class RoomUser(Base):
-    __tablename__ = "room_user"
+    __tablename__ = 'room_user'
 
     room_uuid: Mapped[UUID] = mapped_column(ForeignKey(Room.pk), nullable=False)
     user_uuid: Mapped[UUID] = mapped_column(ForeignKey(User.pk), nullable=False)
@@ -90,13 +92,11 @@ class RoomUser(Base):
 
     user: Mapped[User] = relationship(User, uselist=False)
 
-    __table_args__ = (
-        UniqueConstraint(room_uuid, user_uuid),
-    )
+    __table_args__ = (UniqueConstraint(room_uuid, user_uuid),)
 
 
 class Round(Base):
-    __tablename__ = "round"
+    __tablename__ = 'round'
 
     room_uuid: Mapped[UUID] = mapped_column(ForeignKey(Room.pk), nullable=False)
     suggester_uuid: Mapped[UUID] = mapped_column(ForeignKey(RoomUser.pk), nullable=False)

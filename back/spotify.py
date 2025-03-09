@@ -1,5 +1,5 @@
-from pydantic_settings import BaseSettings
 import spotipy
+from pydantic_settings import BaseSettings
 from spotipy.oauth2 import SpotifyClientCredentials
 
 
@@ -14,7 +14,9 @@ class SpotifySettings(BaseSettings):
 spotify_settings = SpotifySettings()
 
 
-spotify_api = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-    client_id=spotify_settings.client_id,
-    client_secret=spotify_settings.secret_id,
-))
+spotify_api = spotipy.Spotify(
+    auth_manager=SpotifyClientCredentials(
+        client_id=spotify_settings.client_id,
+        client_secret=spotify_settings.secret_id,
+    )
+)

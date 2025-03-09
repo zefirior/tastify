@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 from back.consts import ROUND_DURATION_SEC
-from back.db.base import Room, RoomUser, UserRole, Round, RoomStatus, RoundStages
-from back.db.query_utils import end_round, acquire_advisory_lock
+from back.db.base import Room, RoomStatus, RoomUser, Round, RoundStages, UserRole
+from back.db.query_utils import acquire_advisory_lock, end_round
 
 
 async def dump_room(session, user_uuid: str, room: Room, room_users: list[RoomUser]) -> dict[str, Any]:
