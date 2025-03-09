@@ -21,7 +21,7 @@ export default function SuggesterEndRound({room}) {
                 variant="contained"
                 loading={loading}
                 onClick={nextTurn}
-            >Next turn</Button>
+            >Next round</Button>
             <div>Round finished</div>
         </>
     );
