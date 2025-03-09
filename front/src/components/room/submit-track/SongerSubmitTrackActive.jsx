@@ -1,8 +1,6 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import CloseIcon from '@mui/icons-material/Close';
 import Client from '../../../lib/backend.js';
-import IconButton from '@mui/material/IconButton';
 import MenuItem from "@mui/material/MenuItem";
 import SearchForm from "../submission-utils/SearchForm.jsx";
 import SubmissionForm from "../submission-utils/SubmissionForm.jsx";
@@ -29,8 +27,12 @@ export default function SongerSubmitTrackActive({room}) {
                     Client.searchTrack(groupName, searchName).then(r => {
                         console.log('search result', r); setNameOptions(r);
                     });
-                }}>
-            </SearchForm>
+                }}
+                skipBtn={true}
+                onSkipBtnClick={() => {
+                    Client.skipTrack(room.code).then(console.log);
+                }
+            }/>
 
             {nameOptions.length >0 && (
                 <Box>
@@ -47,16 +49,6 @@ export default function SongerSubmitTrackActive({room}) {
                             Client.submitTrack(room.code, trackName).then(r => console.group('submitted track', r));
                         }}
                     />
-                    <IconButton
-                        aria-label="skip-track"
-                        variant="contained"
-                        color="error"
-                        onClick={() => {
-                            Client.skipTrack(room.code).then(console.log);
-                        }}
-                    >
-                        <CloseIcon />
-                    </IconButton>
                 </Box>
             )}
         </>
