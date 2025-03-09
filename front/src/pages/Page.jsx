@@ -10,10 +10,8 @@ export default function Page(props) {
         <AppTheme {...props}>
             <CssBaseline enableColorScheme />
             <HeaderBar />
-            <main className={'maim-content'}>
+            <main className={'main-content'}>
                 {props.children}
-                <Divider />
-                {/*<Footer />*/}
             </main>
         </AppTheme>
     );
