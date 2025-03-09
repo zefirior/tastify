@@ -26,15 +26,14 @@ async def search_groups(q: str) -> list:
 
 @get('/search/track')
 async def search_tracks(group_id: str, q: str) -> list:
-    artist = spotify_api.artist(group_id)
     tracks = []
-    results = spotify_api.search(q=f'{q} artist:"{artist["name"]}"', limit=50, type='track')
+    results = spotify_api.search(q=f'{group_id} - {q}', limit=50, type='track')
     for track in results['tracks']['items']:
-        if track['artists'][0]['id'] == group_id:
+        if any(group_id == a['name'] for a in track['artists']):
             tracks.append(
                 {
                     'id': track['id'],
-                    'name': track['name'],
+                    'name': f"{group_id} - {track['name']} ({track['album']['name']})",
                 }
             )
 
