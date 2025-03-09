@@ -26,11 +26,12 @@ class Player {
 }
 
 class CurrentRound {
-    constructor(timeLeft, groupName, stage, suggester) {
+    constructor(timeLeft, groupName, stage, suggester, submissions) {
         this.timeLeft = timeLeft;
         this.groupName = groupName;
         this.stage = stage;
         this.suggester = suggester;
+        this.submittions = submissions;
     }
 }
 
@@ -74,6 +75,28 @@ export function getOrSetPlayerUuid() {
 class BackendClient {
     constructor(url) {
         this.url = url;
+    }
+
+    async searchGroup(query) {
+        let options = {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        };
+        return await fetch(`${this.url}/search/group?q=${query}`, options)
+            .then(response => response.json());
+    }
+
+    async searchTrack(groupName, query) {
+        let options = {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        };
+        return await fetch(`${this.url}/search/track?group_id=${groupName}&q=${query}`, options)
+            .then(response => response.json());
     }
 
     async submitGroup(code, groupId) {
@@ -194,6 +217,7 @@ class BackendClient {
             data.group_id,
             this.mapStage(data.current_stage),
             new Player(data.suggester.uuid, data.suggester.nickname, UserRole.PLAYER),
+            data.submissions,
         );
     }
 

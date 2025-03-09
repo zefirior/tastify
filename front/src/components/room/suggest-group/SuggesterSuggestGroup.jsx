@@ -1,33 +1,49 @@
 import Client from '../../../lib/backend.js';
 import * as React from 'react';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
+import MenuItem from "@mui/material/MenuItem";
+import SearchForm from "../submission-utils/SearchForm.jsx";
+import SubmissionForm from "../submission-utils/SubmissionForm.jsx";
+import Box from "@mui/material/Box";
 
 export default function SuggesterSuggestGroup({room}) {
+    const [searchName, setSearchName] = React.useState('');
+    const [nameOptions, setNameOptions] = React.useState([]);
     const [groupName, setGroupName] = React.useState('');
 
     return (
         <>
-            <div>Game started. Please suggest group</div>
-            <Box>
-                <TextField
-                    id="outlined-basic"
-                    label="Outlined"
-                    variant="outlined"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                />
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => {
-                        Client.submitGroup(room.code, groupName).then(r => console.group('submitted group', r));
-                    }}
-                >
-                    Suggest
-                </Button>
-            </Box>
+            <div>The round has started. It&#39;s you turn to suggest a group!</div>
+
+            <SearchForm
+                textPrefix=""
+                searchName={searchName}
+                setSearchName={setSearchName}
+                onSearchCLick={() => {
+                    Client.searchGroup(searchName).then(r => {
+                        console.log('group search result', r);
+                        setNameOptions(r);
+                    });
+                }}>
+            </SearchForm>
+
+            {nameOptions.length >0 && (
+                <Box>
+                    <SubmissionForm
+                        name={groupName}
+                        setName={setGroupName}
+                        nameOptions={nameOptions}
+                        optionBuilder={(option) => (
+                            <MenuItem key={option.id} value={option.name}>
+                                {option.name}
+                            </MenuItem>
+                        )}
+                        onClick={() => {
+                            Client.submitGroup(room.code, groupName)
+                                .then(r => console.group('submitted group', r));
+                        }}
+                    />
+                </Box>
+            )}
         </>
     );
 }

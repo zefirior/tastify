@@ -19,7 +19,7 @@ test-data: run-db
 	PYTHONPATH=.. $(BIN)/python3 db/base.py
 
 run-app:
-	PYTHONPATH=.. $(BIN)/litestar --app entrypoint:app run
+	PYTHONPATH=.. $(BIN)/litestar --app entrypoint:app run --reload
 
 test:
 	PYTHONPATH=back $(BIN)/pytest -v

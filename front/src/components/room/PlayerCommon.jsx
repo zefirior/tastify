@@ -4,22 +4,25 @@ import SuggesterSuggestGroup from './suggest-group/SuggesterSuggestGroup.jsx';
 import SuggesterSubmitTrack from './submit-track/SuggesterSubmitTrack.jsx';
 import SuggesterEndRound from './end-round/SuggesterEndRound.jsx';
 import SongerSuggestGroup from './suggest-group/SongerSuggestGroup.jsx';
-import SongerSubmitTrack from './submit-track/SongerSubmitTrack.jsx';
+import SongerSubmitTrackActive from './submit-track/SongerSubmitTrackActive.jsx';
 import SongerEndRound from './end-round/SongerEndRound.jsx';
 import PlayerNew from './PlayerNew.jsx';
 import PlayersGrid from '../PlayersGrid.jsx';
 import * as React from 'react';
+import SongerSubmitTrackWaiting from "./submit-track/SongerSubmitTrackWaiting.jsx";
 
 export default function PlayerCommon({room}) {
     if (room.status === RoomStatus.NEW) {
         return <PlayerNew room={room} />;
     }
 
-    const suggesterUuid = room.state.currentRound.suggester.uuid;
-    const stage = room.state.currentRound.stage;
+    const currentRound = room.state.currentRound;
+    const suggesterUuid = currentRound.suggester.uuid;
+    const stage = currentRound.stage;
 
     function chooseView() {
-        if (suggesterUuid === getOrSetPlayerUuid()) {
+        const currentPlayer = getOrSetPlayerUuid();
+        if (currentPlayer === suggesterUuid) {
             switch (stage) {
                 case RoundStage.GROUP_SUGGESTION:
                     return <SuggesterSuggestGroup room={room} />;
@@ -33,14 +36,17 @@ export default function PlayerCommon({room}) {
                 case RoundStage.GROUP_SUGGESTION:
                     return <SongerSuggestGroup room={room} />;
                 case RoundStage.TRACKS_SUBMISSION:
-                    return <SongerSubmitTrack room={room} />;
+                    if (!currentRound.submittions.hasOwnProperty(currentPlayer)) {
+                        return <SongerSubmitTrackActive room={room} />;
+                    }
+                    return <SongerSubmitTrackWaiting />
                 case RoundStage.END_ROUND:
                     return <SongerEndRound room={room} />;
             }
         }
     }
 
-    const timeLeft = room.state.currentRound.timeLeft;
+    const timeLeft = currentRound.timeLeft;
 
     return (
         <Page>
