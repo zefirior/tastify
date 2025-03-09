@@ -1,8 +1,8 @@
 from litestar.exceptions import HTTPException
-from sqlalchemy import select, func, sql
+from sqlalchemy import func, select, sql
 from sqlalchemy.orm.attributes import flag_modified
 
-from back.db.base import User, Room, RoomUser, RoomStatus, Round, RoundStages
+from back.db.base import Room, RoomStatus, RoomUser, Round, RoundStages, User
 
 
 async def get_or_create_user(session, user_uuid: str) -> User:
@@ -17,7 +17,7 @@ async def get_or_create_user(session, user_uuid: str) -> User:
 async def get_or_404_room(session, room_code: str) -> Room:
     room_stmt = select(Room).where(Room.code == room_code)
     if not (room := (await session.execute(room_stmt)).scalar()):
-        raise HTTPException(status_code=404, detail="Room not found")
+        raise HTTPException(status_code=404, detail='Room not found')
     return room
 
 
@@ -37,13 +37,13 @@ async def get_room(
 ) -> Room:
     room = await get_or_404_room(session, room_code)
     if forbidden_created_by and room.created_by == forbidden_created_by:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=403, detail='Forbidden')
     if required_created_by and room.created_by != required_created_by:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=403, detail='Forbidden')
     if required_status and room.status != required_status:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid room status: expected {required_status}, got {room.status}",
+            detail=f'Invalid room status: expected {required_status}, got {room.status}',
         )
     if lock:
         await acquire_advisory_lock(session, room)
@@ -57,17 +57,17 @@ async def get_last_round(
     required_stage: RoundStages | None = None,
 ) -> Round:
     if not rounds:
-        raise RuntimeError("Unreachable")
+        raise RuntimeError('Unreachable')
     rnd = rounds[-1]
 
     if forbidden_suggester and rnd.suggester.user_uuid == forbidden_suggester:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=403, detail='Forbidden')
     if required_suggester and rnd.suggester.user_uuid != required_suggester:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=403, detail='Forbidden')
     if required_stage and rnd.current_stage != required_stage:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid round stage: expected {required_stage}, got {rnd.current_stage}",
+            detail=f'Invalid round stage: expected {required_stage}, got {rnd.current_stage}',
         )
     return rnd
 
@@ -97,7 +97,7 @@ async def end_round(rnd: Round) -> None:
             continue
         rnd.results[player_uuid] += 1
         rnd.results[rnd.suggester.user_uuid] += 1
-    flag_modified(rnd, "results")
+    flag_modified(rnd, 'results')
 
 
 async def acquire_advisory_lock(session, obj) -> None:
