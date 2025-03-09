@@ -30,6 +30,8 @@ async def search_groups(q: str) -> list:
 
 @get('/search/track')
 async def search_tracks(group_id: str, q: str) -> list:
+    if not group_id:
+        raise HTTPException(status_code=400, detail='Group ID cannot be empty')
     if not q:
         raise HTTPException(status_code=400, detail='Query cannot be empty')
 
