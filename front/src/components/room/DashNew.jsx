@@ -21,10 +21,12 @@ export default function DashNew({room}) {
         <>
             <h1>Game dashboard: {room.code}</h1>
             <h2>Scan to join</h2>
-            <QRCode
-                title="Scan to join"
-                value={`${import.meta.env['VITE_BASE_URL']}/room/${room.code}/join`}
-            />
+            <div className="qr-back pt-20 background-white p-4 m-4 rounded-lg">
+                <QRCode
+                    title="Scan to join"
+                    value={`${import.meta.env['VITE_BASE_URL']}/room/${room.code}/join`}
+                />
+            </div>
             <Button
                 variant="outlined"
                 color="primary"

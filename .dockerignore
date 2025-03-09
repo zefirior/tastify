@@ -15,5 +15,6 @@ coverage.xml
 *.cover
 *.log
 .git
+front/dist
 front/node_modules
 .idea

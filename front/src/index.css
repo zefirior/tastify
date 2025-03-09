@@ -86,3 +86,8 @@ button:focus-visible {
 .mb-2 {
   margin-bottom: 5px !important;
 }
+
+.qr-back {
+  background-color: white;
+  padding: 8px;
+}
