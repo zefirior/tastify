@@ -44,11 +44,6 @@ export default function DashRunning({room}) {
                     <PlayersGrid room={room} />
                 </Paper>
             </Stack>
-
-            <h1>Game dashboard: {room.code}</h1>
-            <big>Time left: {timeLeft} sec</big>
-            <PlayersGrid room={room} />
-            {dashView}
         </>
     );
 }
