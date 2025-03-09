@@ -1,4 +1,3 @@
-from advanced_alchemy.extensions.litestar import SQLAlchemySerializationPlugin
 from litestar import Litestar, MediaType, Request, Response
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import HTTPException
@@ -50,7 +49,6 @@ def get_app():
     ]
     return Litestar(
         routers,
-        plugins=[SQLAlchemySerializationPlugin()],
         exception_handlers={HTTPException: plain_text_exception_handler},
         cors_config=CORSConfig(allow_origins=consts.ALLOW_ORIGINS),
         logging_config=logging_config,
