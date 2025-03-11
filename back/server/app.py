@@ -1,5 +1,6 @@
 from litestar import Litestar, MediaType, Request, Response
 from litestar.config.cors import CORSConfig
+from litestar.di import Provide
 from litestar.exceptions import HTTPException
 from litestar.logging import LoggingConfig
 
@@ -16,6 +17,7 @@ from back.server.routes import (
     submit_track,
 )
 from back.server.routes.depricated import increase_points
+from back.spotify import get_spotify_client
 
 
 def plain_text_exception_handler(_: Request, exc: Exception) -> Response:
@@ -28,14 +30,8 @@ def plain_text_exception_handler(_: Request, exc: Exception) -> Response:
     )
 
 
-def get_app():
-    logging_config = LoggingConfig(
-        root={'level': 'INFO', 'handlers': ['queue_listener']},
-        formatters={'standard': {'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'}},
-        log_exceptions='always',
-    )
-
-    routers = [
+def get_routes():
+    return [
         create_room,
         join_room,
         increase_points,
@@ -47,9 +43,19 @@ def get_app():
         search_groups,
         search_tracks,
     ]
+
+
+def get_app() -> Litestar:
+    logging_config = LoggingConfig(
+        root={'level': 'INFO', 'handlers': ['queue_listener']},
+        formatters={'standard': {'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'}},
+        log_exceptions='always',
+    )
+
     return Litestar(
-        routers,
+        route_handlers=get_routes(),
         exception_handlers={HTTPException: plain_text_exception_handler},
         cors_config=CORSConfig(allow_origins=consts.ALLOW_ORIGINS),
         logging_config=logging_config,
+        dependencies={'spotify_client': Provide(get_spotify_client, use_cache=True)},
     )

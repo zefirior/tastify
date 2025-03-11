@@ -1,13 +1,15 @@
 from collections.abc import AsyncIterator
 
 import pytest_asyncio
+import spotipy
 from litestar import Litestar
-from litestar.testing import AsyncTestClient
+from litestar.di import Provide
+from litestar.testing import AsyncTestClient, create_async_test_client
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
 from back.db.base import Session, create_all, create_session
-from back.server.app import get_app
+from back.server.app import get_routes
 
 
 @pytest_asyncio.fixture(scope='session')
@@ -34,9 +36,13 @@ def create_test_session(postgres):
 
 
 @pytest_asyncio.fixture()
-async def test_client() -> AsyncIterator[AsyncTestClient[Litestar]]:
-    app = get_app()
-    app.debug = True
+def spotify_client(mocker):
+    return mocker.create_autospec(spotipy.Spotify)
 
-    async with AsyncTestClient(app=app) as client:
+
+@pytest_asyncio.fixture()
+async def test_client(spotify_client) -> AsyncIterator[AsyncTestClient[Litestar]]:
+    async with create_async_test_client(
+        route_handlers=get_routes(), dependencies={'spotify_client': Provide(lambda: spotify_client)}
+    ) as client:
         yield client

@@ -11,12 +11,12 @@ class SpotifySettings(BaseSettings):
         env_prefix = 'SPOTIFY_'
 
 
-spotify_settings = SpotifySettings()
+def get_spotify_client() -> spotipy.Spotify:
+    spotify_settings = SpotifySettings()
 
-
-spotify_api = spotipy.Spotify(
-    auth_manager=SpotifyClientCredentials(
-        client_id=spotify_settings.client_id,
-        client_secret=spotify_settings.secret_id,
+    return spotipy.Spotify(
+        auth_manager=SpotifyClientCredentials(
+            client_id=spotify_settings.client_id,
+            client_secret=spotify_settings.secret_id,
+        )
     )
-)
