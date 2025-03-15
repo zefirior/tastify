@@ -60,6 +60,10 @@ class Room {
         }
         return this.state.totalResults[playerUuid] || 0;
     }
+
+    hasPlayer(playerUuid) {
+        return this.players.find(player => player.uuid === playerUuid) !== undefined;
+    }
 }
 
 export function getOrSetPlayerUuid() {
@@ -70,6 +74,19 @@ export function getOrSetPlayerUuid() {
     const newPlayerUuid = uuidv4().toString();
     localStorage.setItem('playerUuid', newPlayerUuid);
     return newPlayerUuid
+}
+
+export function setPlayerUuid(uuid) {
+    localStorage.setItem('playerUuid', uuid);
+    window.location.reload();
+}
+
+export function getJoinRoomUrl(roomCode) {
+    return `${import.meta.env['VITE_BASE_URL']}${getJoinRoomPath(roomCode)}`
+}
+
+export function getJoinRoomPath(roomCode) {
+    return `/room/${roomCode}/join`
 }
 
 class BackendClient {
@@ -141,16 +158,6 @@ class BackendClient {
 
     async nextTurn(code) {
         return await fetch(`${this.url}/room/${code}/next-round?user_uuid=${getOrSetPlayerUuid()}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        });
-        // TODO: update room store
-    }
-
-    async increment(code) {
-        return await fetch(`${this.url}/room/${code}/user/${getOrSetPlayerUuid()}/increment`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

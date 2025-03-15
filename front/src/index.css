@@ -26,7 +26,7 @@
     font-size: 1.2em;
     font-weight: 500;
     margin-bottom: 4em;
-  padding-bottom: 4em;
+    padding-bottom: 4em;
 }
 
 a {
@@ -91,4 +91,15 @@ button:focus-visible {
 .qr-back {
   background-color: white;
   padding: 8px;
+}
+
+.user-switcher {
+  padding: 15px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+
+.user-switcher-row {
+  margin-top: 20px;
 }

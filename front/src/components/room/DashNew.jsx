@@ -1,11 +1,11 @@
-import Client from '../../lib/backend.js';
+import Client, {getJoinRoomUrl} from '../../lib/backend.js';
 import * as React from 'react';
 import PlayersGrid from '../PlayersGrid.jsx';
 import QRCode from 'react-qr-code';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import {Alert, AlertTitle, Backdrop, Paper} from '@mui/material';
+import {Alert, Backdrop, Paper} from '@mui/material';
 import Typography from '@mui/material/Typography';
 
 export default function DashNew({room}) {
@@ -25,9 +25,13 @@ export default function DashNew({room}) {
         setTimeout(() => {
             setStarting(false);
         }, 5000);
-        await Client.startGame(room.code).then(() => {
-            console.log('game started');
-        });
+        await Client.startGame(room.code)
+            .catch((err) => {
+                console.error(err);
+            })
+            .then(() => {
+                console.log('game started');
+            });
     }
 
 
@@ -53,7 +57,7 @@ export default function DashNew({room}) {
                         <div className="qr-back pt-20 background-white p-4 m-4 rounded-lg">
                             <QRCode
                                 title="Scan to join"
-                                value={`${import.meta.env['VITE_BASE_URL']}/room/${room.code}/join`}
+                                value={getJoinRoomUrl(room.code)}
                             />
                         </div>
                     </Box>

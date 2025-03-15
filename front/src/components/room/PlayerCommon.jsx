@@ -49,10 +49,10 @@ export default function PlayerCommon({room}) {
     const timeLeft = currentRound.timeLeft;
 
     return (
-        <Page>
+        <>
             <PlayersGrid room={room} />
             <big>Time left: {timeLeft} sec</big>
             {chooseView()}
-        </Page>
+        </>
     );
 }
