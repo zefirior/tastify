@@ -8,7 +8,10 @@ import {
     TableHead,
     TableRow,
     Typography,
-    Box
+    Box,
+    Card,
+    CardContent,
+    Stack
 } from '@mui/material';
 import { getOrSetPlayerUuid } from '../../../lib/backend.js';
 
@@ -18,37 +21,54 @@ export default function RoundSummary({room}) {
     const roundResults = currentRound.results || {};
     const currentPlayerUuid = getOrSetPlayerUuid();
 
-    // Sort players: suggester first, then by round points (desc), then by total points (desc)
-    const sortedPlayers = [...room.players].sort((a, b) => {
-        // Suggester always comes first
-        if (a.uuid === currentRound.suggester.uuid) return -1;
-        if (b.uuid === currentRound.suggester.uuid) return 1;
+    // Find suggester
+    const suggester = room.players.find(player => player.uuid === currentRound.suggester.uuid);
+    const isCurrentPlayerSuggester = suggester.uuid === currentPlayerUuid;
 
-        // Sort by round points
-        const aRoundPoints = roundResults[a.uuid] || 0;
-        const bRoundPoints = roundResults[b.uuid] || 0;
-        if (aRoundPoints !== bRoundPoints) {
-            return bRoundPoints - aRoundPoints; // descending order
-        }
+    // Sort remaining players by round points (desc), then by total points (desc)
+    const otherPlayers = room.players
+        .filter(player => player.uuid !== suggester.uuid)
+        .sort((a, b) => {
+            // Sort by round points
+            const aRoundPoints = roundResults[a.uuid] || 0;
+            const bRoundPoints = roundResults[b.uuid] || 0;
+            if (aRoundPoints !== bRoundPoints) {
+                return bRoundPoints - aRoundPoints; // descending order
+            }
 
-        // If round points are equal, sort by total points
-        const aTotalPoints = room.getPlayerScore(a.uuid);
-        const bTotalPoints = room.getPlayerScore(b.uuid);
-        return bTotalPoints - aTotalPoints; // descending order
-    });
+            // If round points are equal, sort by total points
+            const aTotalPoints = room.getPlayerScore(a.uuid);
+            const bTotalPoints = room.getPlayerScore(b.uuid);
+            return bTotalPoints - aTotalPoints; // descending order
+        });
 
     return (
-        <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-                Round Summary
-            </Typography>
-            
-            <Typography variant="subtitle1" gutterBottom>
-                Selected Band: {currentRound.groupName}
-            </Typography>
+        <Box sx={{ mt: 2 }}>
+            <Card variant="outlined" sx={{ mb: 2 }}>
+                <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+                        <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                Round Suggester: {suggester.nickname} {isCurrentPlayerSuggester ? '(You)' : ''}
+                            </Typography>
+                            <Typography variant="body2">
+                                Selected Band: <Box component="span" sx={{ fontWeight: 'bold' }}>{currentRound.groupName}</Box>
+                            </Typography>
+                        </Box>
+                        <Stack direction="row" spacing={2}>
+                            <Typography variant="body2">
+                                Round Points: <Box component="span" sx={{ fontWeight: 'bold' }}>{roundResults[suggester.uuid] || 0}</Box>
+                            </Typography>
+                            <Typography variant="body2">
+                                Total Score: <Box component="span" sx={{ fontWeight: 'bold' }}>{room.getPlayerScore(suggester.uuid)}</Box>
+                            </Typography>
+                        </Stack>
+                    </Stack>
+                </CardContent>
+            </Card>
 
-            <TableContainer component={Paper} sx={{ mt: 2 }}>
-                <Table size="small">
+            <TableContainer component={Paper}>
+                <Table size="small" sx={{ '& .MuiTableCell-root': { py: 1 } }}>
                     <TableHead>
                         <TableRow>
                             <TableCell>Player</TableCell>
@@ -58,8 +78,7 @@ export default function RoundSummary({room}) {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {sortedPlayers.map((player) => {
-                            const isSuggester = player.uuid === currentRound.suggester.uuid;
+                        {otherPlayers.map((player) => {
                             const isCurrentPlayer = player.uuid === currentPlayerUuid;
                             const submission = roundSubmissions[player.uuid];
                             
@@ -71,10 +90,9 @@ export default function RoundSummary({room}) {
                                     <TableCell>
                                         {player.nickname}
                                         {isCurrentPlayer ? ' (You)' : ''}
-                                        {isSuggester ? ' (Suggester)' : ''}
                                     </TableCell>
                                     <TableCell>
-                                        {isSuggester ? '-' : (submission || 'No submission')}
+                                        {submission || 'No submission'}
                                     </TableCell>
                                     <TableCell align="right">
                                         {roundResults[player.uuid] || 0}
