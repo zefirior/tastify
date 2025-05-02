@@ -1,4 +1,3 @@
-import * as React from 'react';
 import {
     Paper,
     Table,
@@ -48,8 +47,8 @@ export default function RoundSummary({room}) {
                 <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between" sx={{ width: '100%' }}>
                         <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                Round Suggester: {suggester.nickname} {isCurrentPlayerSuggester ? '(You)' : ''}
+                            <Typography variant="subtitle1">
+                                Round Suggester: <Box component="span" sx={{ fontWeight: 'bold' }}>{suggester.nickname}</Box>{isCurrentPlayerSuggester ? ' (You)' : ''}
                             </Typography>
                             <Typography variant="body2">
                                 Selected Band: <Box component="span" sx={{ fontWeight: 'bold' }}>{currentRound.groupName}</Box>
