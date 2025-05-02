@@ -15,7 +15,11 @@ export default function SongerSubmitTrackActive({room}) {
 
     return (
         <>
-            <div>{suggesterNick} suggested {groupName}</div>
+            <div>
+                <span style={{ fontWeight: 'bold' }}>{suggesterNick} </span>
+                suggested
+                <span style={{ fontWeight: 'bold' }}> {groupName}</span>
+            </div>
             <div>Now is the time to find their tracks in your liked songs.</div>
             <div>Please submit a track or skip the round.</div>
 
