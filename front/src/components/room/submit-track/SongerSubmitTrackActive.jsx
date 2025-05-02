@@ -11,7 +11,7 @@ export default function SongerSubmitTrackActive({room}) {
 
     const [searchName, setSearchName] = React.useState('');
     const [nameOptions, setNameOptions] = React.useState([]);
-    const [submitOption, setSubmitOption] = React.useState(null);
+    const [selectedKey, setSelectedKey] = React.useState(null);
 
     return (
         <>
@@ -41,11 +41,10 @@ export default function SongerSubmitTrackActive({room}) {
             {nameOptions.length >0 && (
                 <Box>
                     <SubmissionForm
-                        submitOption={submitOption}
-                        setSubmitOption={(value) => {
+                        selectedKey={selectedKey}
+                        setSelectedKey={(value) => {
                             // Find the full option object by id or name
-                            const option = nameOptions.find(opt => opt.id === value || opt.name === value);
-                            setSubmitOption(option.name);
+                            setSelectedKey(value);
                         }}
                         nameOptions={nameOptions}
                         optionBuilder={(option) => (
@@ -54,8 +53,10 @@ export default function SongerSubmitTrackActive({room}) {
                             </MenuItem>
                         )}
                         onClick={() => {
-                            if (submitOption) {
-                                Client.submitTrack(room.code, submitOption).then(r => console.group('submitted track', r));
+                            if (selectedKey) {
+                                const option = nameOptions.find(opt => opt.id === selectedKey);
+                                Client.submitTrack(room.code, option)
+                                    .then(r => console.log('submitted track', r));
                             }
                         }}
                     />
