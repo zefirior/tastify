@@ -81,7 +81,7 @@ export default function RoundSummary({room}) {
                     <TableBody>
                         {otherPlayers.map((player) => {
                             const isCurrentPlayer = player.uuid === currentPlayerUuid;
-                            const submission = roundSubmissions[player.uuid];
+                            const submission = roundSubmissions[player.uuid]?.name;
                             
                             return (
                                 <TableRow
