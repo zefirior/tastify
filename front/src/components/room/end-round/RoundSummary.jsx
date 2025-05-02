@@ -10,11 +10,32 @@ import {
     Typography,
     Box
 } from '@mui/material';
+import { getOrSetPlayerUuid } from '../../../lib/backend.js';
 
 export default function RoundSummary({room}) {
     const currentRound = room.state.currentRound;
     const roundSubmissions = currentRound.submittions || {};
     const roundResults = currentRound.results || {};
+    const currentPlayerUuid = getOrSetPlayerUuid();
+
+    // Sort players: suggester first, then by round points (desc), then by total points (desc)
+    const sortedPlayers = [...room.players].sort((a, b) => {
+        // Suggester always comes first
+        if (a.uuid === currentRound.suggester.uuid) return -1;
+        if (b.uuid === currentRound.suggester.uuid) return 1;
+
+        // Sort by round points
+        const aRoundPoints = roundResults[a.uuid] || 0;
+        const bRoundPoints = roundResults[b.uuid] || 0;
+        if (aRoundPoints !== bRoundPoints) {
+            return bRoundPoints - aRoundPoints; // descending order
+        }
+
+        // If round points are equal, sort by total points
+        const aTotalPoints = room.getPlayerScore(a.uuid);
+        const bTotalPoints = room.getPlayerScore(b.uuid);
+        return bTotalPoints - aTotalPoints; // descending order
+    });
 
     return (
         <Box sx={{ mt: 3 }}>
@@ -37,8 +58,9 @@ export default function RoundSummary({room}) {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {room.players.map((player) => {
+                        {sortedPlayers.map((player) => {
                             const isSuggester = player.uuid === currentRound.suggester.uuid;
+                            const isCurrentPlayer = player.uuid === currentPlayerUuid;
                             const submission = roundSubmissions[player.uuid];
                             
                             return (
@@ -48,6 +70,7 @@ export default function RoundSummary({room}) {
                                 >
                                     <TableCell>
                                         {player.nickname}
+                                        {isCurrentPlayer ? ' (You)' : ''}
                                         {isSuggester ? ' (Suggester)' : ''}
                                     </TableCell>
                                     <TableCell>
