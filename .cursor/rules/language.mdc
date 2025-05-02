@@ -1,0 +1,26 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# English Only Rule
+
+All code, comments, documentation, variable names, commit messages, and any other written content in this repository must be in English.  
+This ensures consistency, improves collaboration, and makes the project accessible to a wider audience.
+
+- Do not use other languages (e.g., Russian) in code, comments, or documentation.
+- If you find non-English text, please refactor it to English as soon as possible.
+- This rule applies to all files, including code, markdown, configuration, and documentation.
+
+**Example:**
+```python
+# Good
+# This function calculates the sum of two numbers.
+def add(a, b):
+    return a + b
+
+# Bad
+# Эта функция вычисляет сумму двух чисел.
+def add(a, b):
+    return a + b
+```
