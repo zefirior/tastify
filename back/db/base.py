@@ -103,8 +103,8 @@ class Round(Base):
 
     number: Mapped[int] = mapped_column(nullable=False)
     started_at: Mapped[datetime] = mapped_column(nullable=False, server_default=text('now()'))
-    group_id: Mapped[str] = mapped_column(nullable=True)
-    submissions: Mapped[dict[str, str]] = mapped_column(type_=JSON, nullable=True)
+    group: Mapped[dict[str, str]] = mapped_column(type_=JSON, nullable=True)
+    submissions: Mapped[dict[str, dict[str, str]]] = mapped_column(type_=JSON, nullable=True)
     current_stage: Mapped[str] = mapped_column(nullable=False)
     results: Mapped[dict[str, str]] = mapped_column(type_=JSON, nullable=True)
 

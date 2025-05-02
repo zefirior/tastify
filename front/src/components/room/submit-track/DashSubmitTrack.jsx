@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography';
 
 export default function DashSubmitTrack({room}) {
     const suggesterNick = room.state.currentRound.suggester.nickname.toUpperCase();
-    const groupName = room.state.currentRound.groupName;
+    const groupName = room.state.currentRound.group.name;
     return (
         <Typography variant="body2" sx={{color: 'text.secondary'}}>
             {suggesterNick} suggested <p className={'font-bold'}>{groupName}</p>
