@@ -1,30 +1,25 @@
 import Client from '../lib/backend.js';
 import Box from '@mui/material/Box';
-import InputLabel from '@mui/material/InputLabel';
+import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import * as React from 'react';
-import {FormControl, OutlinedInput} from '@mui/material';
-import {useNavigate} from 'react-router';
+import { FormControl, InputLabel, OutlinedInput, Typography } from '@mui/material';
+import { useNavigate } from 'react-router';
 
 export default function ChooseGame(props) {
     const [playerName, setPlayerName] = React.useState('');
     const [roomCode, setRoomCode] = React.useState(props.roomCode || '');
     const navigate = useNavigate();
 
-
     function createRoom() {
-        console.log('create room');
         Client.createRoom().then((room) => {
-            console.log('created room', room);
             navigate(`/room/${room.code}`);
         });
     }
 
     function joinRoom() {
-        console.log('join room');
         Client.joinRoom(roomCode, playerName).then(() => {
-            console.log('joined room', roomCode);
             navigate(`/room/${roomCode}`);
         });
     }
@@ -32,80 +27,97 @@ export default function ChooseGame(props) {
     const isNotReadyToJoin = !playerName || !roomCode;
 
     return (
-        <>
-            <h1>{'Choose your game'}</h1>
-            <Box
-                component="form"
-                sx={{ '& > :not(style)': { m: 1 } }}
-                noValidate
-                autoComplete="off"
-            >
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap>
-                    <div>
-                        <FormControl className={'mb-2'}>
-                            <InputLabel
-                                className={'input-label'}
-                                htmlFor="join-room-player-name"
-                            >Fun name</InputLabel>
+        <Box sx={{ width: '100%', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4}>
+                {/* Create Game Card */}
+                <Paper variant="elevation" color={'blue'} sx={{
+                    p: 4,
+                    width: 360,
+                    height: 320,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                        transform: 'scale(1.04)',
+                    },
+                }}>
+                    <div style={{ width: '100%', textAlign: 'left' }}>
+                        <Typography variant="h4" gutterBottom>
+                            New Game
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mb: 3, fontSize: '1.2rem' }}>
+                            {/* Replace this with your actual game description */}
+                            Welcome to Tastify! Create a new game room and invite your friends to join. Enjoy a fun and interactive experience.
+                        </Typography>
+                    </div>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        size="large"
+                        onClick={createRoom}
+                        sx={{ width: '100%', fontSize: '1.1rem', height: 48 }}
+                    >
+                        Create
+                    </Button>
+                </Paper>
+
+                {/* Join Game Card */}
+                <Paper variant="elevation" sx={{
+                    p: 4,
+                    width: 300,
+                    height: 320,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                        transform: 'scale(1.04)',
+                    },
+                }}>
+                    <div style={{ width: '100%' }}>
+                        <Typography variant="h4" gutterBottom>
+                            Join Game
+                        </Typography>
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel htmlFor="join-room-player-name" sx={{ fontSize: '1.1rem' }}>Nick</InputLabel>
                             <OutlinedInput
                                 id="join-room-player-name"
-                                fullWidth
-                                // size="small"
-                                // sx={{width: '250px'}}
-                                // defaultValue="Composed TextField sdfsd"
-                                aria-label="Enter your player name"
-                                // label="Player name"
-                                placeholder="Fun name"
+                                aria-label="Enter your nickname"
+                                placeholder="Nick"
                                 value={playerName}
                                 onChange={(event) => setPlayerName(event.target.value)}
+                                label="Nick"
+                                sx={{ fontSize: '1.1rem', height: 48 }}
                             />
                         </FormControl>
-
-                        &nbsp;&nbsp;&nbsp;
-
-                        <FormControl className={'mb-2'}>
-                            <InputLabel
-                                htmlFor="join-room-code"
-                            >Room code</InputLabel>
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel htmlFor="join-room-code" sx={{ fontSize: '1.1rem' }}>Room code</InputLabel>
                             <OutlinedInput
                                 id="join-room-code"
-                                fullWidth
-                                // size="small"
-                                // sx={{width: '250px'}}
-                                // defaultValue="Composed TextField sdfsd"
                                 aria-label="Enter room code to join"
-                                // label="Player name"
                                 placeholder="Room code"
                                 value={roomCode}
                                 onChange={(event) => setRoomCode(event.target.value)}
+                                label="Room code"
+                                sx={{ fontSize: '1.1rem', height: 48 }}
                             />
                         </FormControl>
                     </div>
-
-                    <div>
-                        <Button
-                            variant="text"
-                            color="primary"
-                            size="small"
-                            sx={{flexShrink: 0}}
-                            disabled={isNotReadyToJoin}
-                            onClick={() => joinRoom()}
-                        >
-                            Join
-                        </Button>
-                        <span>or&nbsp;&nbsp;&nbsp;</span>
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            size="small"
-                            sx={{flexShrink: 0}}
-                            onClick={() => createRoom()}
-                        >
-                            Create
-                        </Button>
-                    </div>
-                </Stack>
-            </Box>
-        </>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        size="large"
+                        disabled={isNotReadyToJoin}
+                        onClick={joinRoom}
+                        sx={{ width: '100%', fontSize: '1.1rem', height: 48 }}
+                    >
+                        Join
+                    </Button>
+                </Paper>
+            </Stack>
+        </Box>
     );
 }
