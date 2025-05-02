@@ -1,11 +1,12 @@
 import * as React from 'react';
 import Typography from '@mui/material/Typography';
+import ScoreTable from '../../ScoreTable.jsx';
 
 export default function DashEndRound({ room }) {
     // Defensive checks for nested properties
-    const submittions = room?.state?.currentRound?.submittions || {};
-    // Get the first submission object from the submittions dictionary
-    const firstSubmission = Object.values(submittions)[0];
+    const submissions = room?.state?.currentRound?.submissions || {};
+    // Get the first submission object from the submissions dictionary
+    const firstSubmission = Object.values(submissions)[0];
     const trackId = firstSubmission?.id;
 
     if (trackId) {
@@ -17,6 +18,9 @@ export default function DashEndRound({ room }) {
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Round finished
             </Typography>
+
+            <ScoreTable room={room} />
+
             {trackId ? (
                 <iframe
                     style={{ borderRadius: '12px' }}

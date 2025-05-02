@@ -1,4 +1,3 @@
-import * as React from 'react';
 import Typography from '@mui/material/Typography';
 
 export default function DashSuggestGroup({room}) {
@@ -6,7 +5,7 @@ export default function DashSuggestGroup({room}) {
     return (
         <>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Round has started. Please relax and enjoy till {suggester.nickname.toUpperCase()} suggests group
+                Round has started. Please relax and enjoy till <span style={{ fontWeight: 'bold' }}>{suggester.nickname}</span> suggests group
             </Typography>
         </>
     );

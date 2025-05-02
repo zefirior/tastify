@@ -6,7 +6,7 @@ import SearchForm from "../submission-utils/SearchForm.jsx";
 import SubmissionForm from "../submission-utils/SubmissionForm.jsx";
 
 export default function SongerSubmitTrackActive({room}) {
-    const suggesterNick = room.state.currentRound.suggester.nickname.toUpperCase();
+    const suggesterNick = room.state.currentRound.suggester.nickname;
     const groupName = room.state.currentRound.group.name;
 
     const [searchName, setSearchName] = React.useState('');
@@ -15,7 +15,11 @@ export default function SongerSubmitTrackActive({room}) {
 
     return (
         <>
-            <div>{suggesterNick} suggested {groupName}</div>
+            <div>
+                <span style={{ fontWeight: 'bold' }}>{suggesterNick} </span>
+                suggested
+                <span style={{ fontWeight: 'bold' }}> {groupName}</span>
+            </div>
             <div>Now is the time to find their tracks in your liked songs.</div>
             <div>Please submit a track or skip the round.</div>
 
