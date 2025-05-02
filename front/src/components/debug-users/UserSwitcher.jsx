@@ -1,4 +1,4 @@
-import {Paper} from "@mui/material";
+import {Paper, Accordion, AccordionSummary, AccordionDetails} from "@mui/material";
 import * as React from "react";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
@@ -13,6 +13,7 @@ import {getOrSetPlayerUuid, RoundStage, setPlayerUuid, UserRole} from "../../lib
 import {DebugUsersStoreContext} from "../../stores/debug-users.js";
 import IconButton from "@mui/material/IconButton";
 import {v4 as uuidv4} from "uuid";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 
 const DebugUserRole = Object.freeze({
@@ -90,61 +91,70 @@ const UserSwitcher = observer(() => {
     let users = collectDebugUsers(roomStore, userStoreStore);
 
     let [newUserNickname, setNewUserNickname] = React.useState('');
+    let [expanded, setExpanded] = React.useState(false);
 
     return (
-        <Paper className={"user-switcher"}>
-            <Box spacing={20}>
-                <Typography className={"mb-5"} variant="h5" component="div">
-                    Act under user
-                </Typography>
-
-                {Array.from(users.values()).map((user) => {
-                    return (
-                        <Box className={"user-switcher-row"} key={user.uuid}>
-                            <TextField
-                                label={getRoleString(user.role)}
-                                value={user.nickname}
-                                variant="standard"
-                                onChange={(e) => userStoreStore.setNick(user.uuid, e.target.value)}
-                            />
-                            <Button
-                                variant={user.is_active ? 'contained' : 'outlined'}
-                                onClick={user.is_active ? null : () => setPlayerUuid(user.uuid)}
-                            >
-                                {user.is_active ? 'Active' : 'Switch'}
-                            </Button>
-                            <IconButton
-                                aria-label="delete"
-                                onClick={() => userStoreStore.removeUser(user.uuid)}
-                                disabled={user.is_active}
-                            >
-                                <DeleteIcon />
-                            </IconButton>
+        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1300 }}>
+            <Accordion expanded={expanded} onChange={() => setExpanded(!expanded)} sx={{ width: 400, maxHeight: '80vh', overflowY: 'auto', mb: 2 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="h6">User Switcher (debug)</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 0 }}>
+                    <Paper className={"user-switcher"} sx={{ width: '100%' }}>
+                        <Box spacing={20}>
+                            <Typography className={"mb-5"} variant="h5" component="div">
+                                Act under user
+                            </Typography>
+                            {Array.from(users.values()).map((user) => {
+                                return (
+                                    <Box className={"user-switcher-row"} key={user.uuid}>
+                                        <TextField
+                                            label={getRoleString(user.role)}
+                                            value={user.nickname}
+                                            variant="standard"
+                                            onChange={(e) => userStoreStore.setNick(user.uuid, e.target.value)}
+                                        />
+                                        <Button
+                                            variant={user.is_active ? 'contained' : 'outlined'}
+                                            onClick={user.is_active ? null : () => setPlayerUuid(user.uuid)}
+                                        >
+                                            {user.is_active ? 'Active' : 'Switch'}
+                                        </Button>
+                                        <IconButton
+                                            aria-label="delete"
+                                            onClick={() => userStoreStore.removeUser(user.uuid)}
+                                            disabled={user.is_active}
+                                        >
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </Box>
+                                );
+                            })}
+                            <Box className={"user-switcher-row"}>
+                                <TextField
+                                    label="New user"
+                                    placeholder={"Enter nickname"}
+                                    value={newUserNickname}
+                                    variant="outlined"
+                                    onChange={(e) => setNewUserNickname(e.target.value)}
+                                />
+                                <IconButton
+                                    aria-label="add"
+                                    variant="outlined"
+                                    onClick={() => {
+                                        console.log("Adding new user: ", newUserNickname);
+                                        userStoreStore.setNick(uuidv4().toString(), newUserNickname);
+                                        setNewUserNickname('');
+                                    }}
+                                >
+                                    <AddIcon />
+                                </IconButton>
+                            </Box>
                         </Box>
-                    );
-                })}
-                <Box className={"user-switcher-row"}>
-                    <TextField
-                        label="New user"
-                        placeholder={"Enter nickname"}
-                        value={newUserNickname}
-                        variant="outlined"
-                        onChange={(e) => setNewUserNickname(e.target.value)}
-                    />
-                    <IconButton
-                        aria-label="add"
-                        variant="outlined"
-                        onClick={() => {
-                            console.log("Adding new user: ", newUserNickname);
-                            userStoreStore.setNick(uuidv4().toString(), newUserNickname);
-                            setNewUserNickname('');
-                        }}
-                    >
-                        <AddIcon />
-                    </IconButton>
-                </Box>
-            </Box>
-        </Paper>
+                    </Paper>
+                </AccordionDetails>
+            </Accordion>
+        </Box>
     )
 });
 

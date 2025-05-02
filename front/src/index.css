@@ -95,9 +95,6 @@ button:focus-visible {
 
 .user-switcher {
   padding: 15px;
-  position: absolute;
-  right: 0;
-  bottom: 0;
 }
 
 .user-switcher-row {
