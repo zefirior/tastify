@@ -26,9 +26,9 @@ class Player {
 }
 
 class CurrentRound {
-    constructor(timeLeft, groupName, stage, suggester, submissions) {
+    constructor(timeLeft, group, stage, suggester, submissions) {
         this.timeLeft = timeLeft;
-        this.groupName = groupName;
+        this.group = group;
         this.stage = stage;
         this.suggester = suggester;
         this.submittions = submissions;
@@ -116,23 +116,27 @@ class BackendClient {
             .then(response => response.json());
     }
 
-    async submitGroup(code, groupId) {
-        return await fetch(`${this.url}/room/${code}/submit/group?user_uuid=${getOrSetPlayerUuid()}&group_id=${groupId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        });
+    async submitGroup(code, option) {
+        return await fetch(`${this.url}/room/${code}/submit/group?user_uuid=${getOrSetPlayerUuid()}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(option)
+            });
         // TODO: update room store
     }
 
-    async submitTrack(code, trackId) {
-        return await fetch(`${this.url}/room/${code}/submit/track?user_uuid=${getOrSetPlayerUuid()}&track_id=${trackId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        });
+    async submitTrack(code, option) {
+        return await fetch(`${this.url}/room/${code}/submit/track?user_uuid=${getOrSetPlayerUuid()}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(option)
+            });
         // TODO: update room store
     }
 
@@ -221,7 +225,7 @@ class BackendClient {
 
         return new CurrentRound(
             data.timeleft,
-            data.group_id,
+            data.group,
             this.mapStage(data.current_stage),
             new Player(data.suggester.uuid, data.suggester.nickname, UserRole.PLAYER),
             data.submissions,
