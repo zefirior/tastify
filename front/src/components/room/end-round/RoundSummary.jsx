@@ -43,10 +43,10 @@ export default function RoundSummary({room}) {
         });
 
     return (
-        <Box sx={{ mt: 2 }}>
-            <Card variant="outlined" sx={{ mb: 2 }}>
+        <Box sx={{ mt: 2, width: '100%' }}>
+            <Card variant="outlined" sx={{ mb: 2, width: '100%' }}>
                 <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between" sx={{ width: '100%' }}>
                         <Box>
                             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                                 Round Suggester: {suggester.nickname} {isCurrentPlayerSuggester ? '(You)' : ''}
@@ -67,14 +67,14 @@ export default function RoundSummary({room}) {
                 </CardContent>
             </Card>
 
-            <TableContainer component={Paper}>
-                <Table size="small" sx={{ '& .MuiTableCell-root': { py: 1 } }}>
+            <TableContainer component={Paper} sx={{ width: '100%' }}>
+                <Table size="small" sx={{ '& .MuiTableCell-root': { py: 1 }, width: '100%' }}>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Player</TableCell>
-                            <TableCell>Submitted Song</TableCell>
-                            <TableCell align="right">Round Points</TableCell>
-                            <TableCell align="right">Total Score</TableCell>
+                            <TableCell width="30%">Player</TableCell>
+                            <TableCell width="40%">Submitted Song</TableCell>
+                            <TableCell width="15%" align="right">Round Points</TableCell>
+                            <TableCell width="15%" align="right">Total Score</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
