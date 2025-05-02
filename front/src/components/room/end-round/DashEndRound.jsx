@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Typography from '@mui/material/Typography';
-import ScoreTable from '../../ScoreTable.jsx';
+import RoundSummary from "./RoundSummary.jsx";
 
 export default function DashEndRound({ room }) {
     // Defensive checks for nested properties
@@ -19,7 +19,7 @@ export default function DashEndRound({ room }) {
                 Round finished
             </Typography>
 
-            <ScoreTable room={room} />
+            <RoundSummary room={room} />
 
             {trackId ? (
                 <iframe
