@@ -10,12 +10,13 @@ import {
     Typography,
     Box
 } from '@mui/material';
+import {RoomStatus} from "../lib/backend.js";
 
 export default function ScoreTable({room}) {
     return (
         <Box sx={{ mt: 3 }}>
             <Typography variant="h6" gutterBottom>
-                Players
+                {room.status === RoomStatus.FINISHED? "Final scores": "Players"}
             </Typography>
 
             <TableContainer component={Paper} sx={{ mt: 2 }}>
