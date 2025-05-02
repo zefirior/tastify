@@ -35,7 +35,7 @@ export default function PlayerCommon({room}) {
                 case RoundStage.GROUP_SUGGESTION:
                     return <SongerSuggestGroup room={room} />;
                 case RoundStage.TRACKS_SUBMISSION:
-                    if (!Object.prototype.hasOwnProperty.call(currentRound.submittions, currentPlayer)) {
+                    if (!Object.prototype.hasOwnProperty.call(currentRound.submissions, currentPlayer)) {
                         return <SongerSubmitTrackActive room={room} />;
                     }
                     return <SongerSubmitTrackWaiting />

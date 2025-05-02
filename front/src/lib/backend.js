@@ -31,7 +31,7 @@ class CurrentRound {
         this.groupName = groupName;
         this.stage = stage;
         this.suggester = suggester;
-        this.submittions = submissions;
+        this.submissions = submissions;
         this.results = results;
     }
 }

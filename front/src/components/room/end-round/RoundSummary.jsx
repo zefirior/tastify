@@ -17,7 +17,7 @@ import { getOrSetPlayerUuid } from '../../../lib/backend.js';
 
 export default function RoundSummary({room}) {
     const currentRound = room.state.currentRound;
-    const roundSubmissions = currentRound.submittions || {};
+    const roundSubmissions = currentRound.submissions || {};
     const roundResults = currentRound.results || {};
     const currentPlayerUuid = getOrSetPlayerUuid();
 
