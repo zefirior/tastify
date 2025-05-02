@@ -5,8 +5,8 @@ export default function SuggesterSubmitTrack({room}) {
 
     return (
         <>
-            <div>You suggest {groupName}</div>
-            <div>Enjoy the silence while your friends are thinking...</div>
+            <div>You suggest <span style={{ fontWeight: 'bold' }}>{groupName}</span></div>
+            <div>Enjoy the silence while your friends are thinking</div>
         </>
     );
 }

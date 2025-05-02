@@ -4,7 +4,6 @@ import SuggesterSubmitTrack from './submit-track/SuggesterSubmitTrack.jsx';
 import SongerSuggestGroup from './suggest-group/SongerSuggestGroup.jsx';
 import SongerSubmitTrackActive from './submit-track/SongerSubmitTrackActive.jsx';
 import PlayerNew from './PlayerNew.jsx';
-import ScoreTable from '../ScoreTable.jsx';
 import RoundSummary from './end-round/RoundSummary.jsx';
 import SongerSubmitTrackWaiting from "./submit-track/SongerSubmitTrackWaiting.jsx";
 import SuggesterEndRound from './end-round/SuggesterEndRound.jsx';
@@ -56,7 +55,6 @@ export default function PlayerCommon({room}) {
 
     return (
         <>
-            {stage === RoundStage.END_ROUND ? null : <ScoreTable room={room} />}
             <big>Time left: {timeLeft} sec</big>
             {chooseView()}
         </>
