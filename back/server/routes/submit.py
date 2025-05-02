@@ -1,4 +1,4 @@
-from litestar import Response, post
+from litestar import Response, post, Request
 from litestar.exceptions import HTTPException
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -7,7 +7,8 @@ from back.db.query_utils import end_round, get_last_round, get_room, get_room_us
 
 
 @post('/room/{room_code:str}/submit/group')
-async def submit_group(room_code: str, user_uuid: str, group_id: str) -> Response:
+async def submit_group(room_code: str, user_uuid: str, request: Request) -> Response:
+    data = await request.json()
     async with create_session() as session:
         room = await get_room(
             session,
@@ -23,14 +24,15 @@ async def submit_group(room_code: str, user_uuid: str, group_id: str) -> Respons
             required_stage=RoundStages.GROUP_SUGGESTION,
         )
 
-        current_round.group_id = group_id
+        current_round.group = data
         current_round.current_stage = RoundStages.TRACKS_SUBMISSION
 
     return Response(status_code=200, content={})
 
 
 @post('/room/{room_code:str}/submit/track')
-async def submit_track(room_code: str, user_uuid: str, track_id: str | None = None) -> Response:
+async def submit_track(room_code: str, user_uuid: str, request: Request) -> Response:
+    data = await request.json()
     async with create_session() as session:
         room = await get_room(
             session,
@@ -50,7 +52,7 @@ async def submit_track(room_code: str, user_uuid: str, track_id: str | None = No
         if user_uuid in current_round.submissions:
             raise HTTPException(status_code=400, detail='User already submitted')
 
-        current_round.submissions[user_uuid] = track_id
+        current_round.submissions[user_uuid] = data
         flag_modified(current_round, 'submissions')
 
         players = await get_room_users(session, room_code)

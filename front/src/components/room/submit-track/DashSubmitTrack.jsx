@@ -10,9 +10,6 @@ export default function DashSubmitTrack({room}) {
         return null;
     }
 
-    const suggesterNick = room.state.currentRound.suggester.nickname;
-    const groupName = room.state.currentRound.groupName || '';
-    
     // Players who haven't submitted tracks yet:
     const pendingPlayers = room.players?.filter(player => {
         const hasSubmitted = Object.hasOwn(room.state.currentRound.submissions || {}, player.uuid);
@@ -21,6 +18,8 @@ export default function DashSubmitTrack({room}) {
         return !hasSubmitted && !isSuggester;
     }) || [];
 
+    const suggesterNick = room.state.currentRound.suggester.nickname.toUpperCase();
+    const groupName = room.state.currentRound.group?.name || '';
     return (
         <Box>
             <Typography variant="body2" sx={{color: 'text.secondary', mb: 2}}>
@@ -28,7 +27,7 @@ export default function DashSubmitTrack({room}) {
                 Now is the time to find their tracks in your liked songs.
                 Please submit a track or skip the round.
             </Typography>
-            
+
             {pendingPlayers.length > 0 && (
                 <>
                     <Typography variant="body2" sx={{color: 'text.secondary', mt: 2, mb: 1}}>
@@ -37,7 +36,7 @@ export default function DashSubmitTrack({room}) {
                     <List dense>
                         {pendingPlayers.map((player) => (
                             <ListItem key={player.uuid}>
-                                <ListItemText 
+                                <ListItemText
                                     primary={player.nickname}
                                     sx={{ '& .MuiTypography-root': { color: 'text.secondary' } }}
                                 />

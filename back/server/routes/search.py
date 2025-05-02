@@ -47,6 +47,7 @@ async def search_tracks(spotify_client: Annotated[spotipy.Spotify, Dependency()]
         if (name := f"{group_id} - {track['name']}") in seen:
             continue
 
+        print(track)
         tracks.append({'id': track['id'], 'name': name})
         seen.add(name)
 

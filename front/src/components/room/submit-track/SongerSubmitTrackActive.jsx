@@ -7,11 +7,11 @@ import SubmissionForm from "../submission-utils/SubmissionForm.jsx";
 
 export default function SongerSubmitTrackActive({room}) {
     const suggesterNick = room.state.currentRound.suggester.nickname;
-    const groupName = room.state.currentRound.groupName;
-    const [trackName, setTrackName] = React.useState('');
+    const groupName = room.state.currentRound.group.name;
 
     const [searchName, setSearchName] = React.useState('');
     const [nameOptions, setNameOptions] = React.useState([]);
+    const [submitOption, setSubmitOption] = React.useState(null);
 
     return (
         <>
@@ -41,16 +41,22 @@ export default function SongerSubmitTrackActive({room}) {
             {nameOptions.length >0 && (
                 <Box>
                     <SubmissionForm
-                        name={trackName}
-                        setName={setTrackName}
+                        submitOption={submitOption}
+                        setSubmitOption={(value) => {
+                            // Find the full option object by id or name
+                            const option = nameOptions.find(opt => opt.id === value || opt.name === value);
+                            setSubmitOption(option);
+                        }}
                         nameOptions={nameOptions}
                         optionBuilder={(option) => (
-                            <MenuItem key={option.id} value={option.name}>
+                            <MenuItem key={option.id} value={option.id}>
                                 {option.name}
                             </MenuItem>
                         )}
                         onClick={() => {
-                            Client.submitTrack(room.code, trackName).then(r => console.group('submitted track', r));
+                            if (submitOption) {
+                                Client.submitTrack(room.code, submitOption).then(r => console.group('submitted track', r));
+                            }
                         }}
                     />
                 </Box>

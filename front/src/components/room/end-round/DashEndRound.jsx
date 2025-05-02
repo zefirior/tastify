@@ -1,10 +1,44 @@
 import * as React from 'react';
-import RoundSummary from './RoundSummary.jsx';
+import Typography from '@mui/material/Typography';
 import ScoreTable from '../../ScoreTable.jsx';
 import { RoundStage } from '../../../lib/backend.js';
 
-export default function DashEndRound({room}) {
+export default function DashEndRound({ room }) {
+    // Defensive checks for nested properties
+    const submissions = room?.state?.currentRound?.submissions || {};
+    // Get the first submission object from the submissions dictionary
+    const firstSubmission = Object.values(submissions)[0];
+    const trackId = firstSubmission?.id;
+
     const stage = room.state.currentRound.stage;
-    
-    return stage === RoundStage.END_ROUND ? <RoundSummary room={room} /> : <ScoreTable room={room} />;
+    if (stage === RoundStage.END_ROUND) return <ScoreTable room={room} />;
+
+    if (trackId) {
+        console.log('DashEndRound: found trackId', trackId);
+    }
+
+    return (
+        <>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Round finished
+            </Typography>
+            {trackId ? (
+                <iframe
+                    style={{ borderRadius: '12px' }}
+                    src={`https://open.spotify.com/embed/track/${trackId}?utm_source=generator`}
+                    width="100%"
+                    height="152"
+                    frameBorder="0"
+                    allowFullScreen=""
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                    title="Spotify Player"
+                ></iframe>
+            ) : (
+                <Typography variant="body2" sx={{ color: 'error.main', mt: 2 }}>
+                    Unfortunately, nobody recognized the suggested band :(
+                </Typography>
+            )}
+        </>
+    );
 }

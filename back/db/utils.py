@@ -56,7 +56,7 @@ async def _dump_round(room: Room, rnd: Round, session) -> dict[str, Any]:
     return {
         'number': rnd.number,
         'timeleft': timeleft,
-        'group_id': rnd.group_id,
+        'group': rnd.group,
         'submissions': rnd.submissions,
         'current_stage': rnd.current_stage,
         'results': rnd.results,

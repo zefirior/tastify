@@ -91,7 +91,7 @@ const UserSwitcher = observer(() => {
     let users = collectDebugUsers(roomStore, userStoreStore);
 
     let [newUserNickname, setNewUserNickname] = React.useState('');
-    let [expanded, setExpanded] = React.useState(false);
+    let [expanded, setExpanded] = React.useState(true);
 
     return (
         <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1300 }}>
