@@ -7,6 +7,7 @@ import PlayerNew from './PlayerNew.jsx';
 import ScoreTable from '../ScoreTable.jsx';
 import RoundSummary from './end-round/RoundSummary.jsx';
 import SongerSubmitTrackWaiting from "./submit-track/SongerSubmitTrackWaiting.jsx";
+import SuggesterEndRound from './end-round/SuggesterEndRound.jsx';
 
 export default function PlayerCommon({room}) {
     if (room.status === RoomStatus.NEW) {
@@ -20,6 +21,14 @@ export default function PlayerCommon({room}) {
     function chooseView() {
         const currentPlayer = getOrSetPlayerUuid();
         if (stage === RoundStage.END_ROUND) {
+            if (currentPlayer === suggesterUuid) {
+                return (
+                    <>
+                        <RoundSummary room={room} />
+                        <SuggesterEndRound room={room} />
+                    </>
+                );
+            }
             return <RoundSummary room={room} />;
         }
         

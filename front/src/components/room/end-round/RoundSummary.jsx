@@ -13,6 +13,7 @@ import {
     Stack
 } from '@mui/material';
 import { getOrSetPlayerUuid } from '../../../lib/backend.js';
+import * as React from "react";
 
 export default function RoundSummary({room}) {
     const currentRound = room.state.currentRound;
@@ -43,6 +44,7 @@ export default function RoundSummary({room}) {
 
     return (
         <Box sx={{ mt: 2, width: '100%' }}>
+            <div>Round finished</div>
             <Card variant="outlined" sx={{ mb: 2, width: '100%' }}>
                 <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between" sx={{ width: '100%' }}>
