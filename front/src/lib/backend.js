@@ -26,12 +26,13 @@ class Player {
 }
 
 class CurrentRound {
-    constructor(timeLeft, groupName, stage, suggester, submissions) {
+    constructor(timeLeft, groupName, stage, suggester, submissions, results) {
         this.timeLeft = timeLeft;
         this.groupName = groupName;
         this.stage = stage;
         this.suggester = suggester;
         this.submittions = submissions;
+        this.results = results;
     }
 }
 
@@ -225,6 +226,7 @@ class BackendClient {
             this.mapStage(data.current_stage),
             new Player(data.suggester.uuid, data.suggester.nickname, UserRole.PLAYER),
             data.submissions,
+            data.results,
         );
     }
 

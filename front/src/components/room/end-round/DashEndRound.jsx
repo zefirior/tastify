@@ -1,12 +1,6 @@
 import * as React from 'react';
-import Typography from '@mui/material/Typography';
+import RoundSummary from './RoundSummary.jsx';
 
-export default function DashEndRound() {
-    return (
-        <>
-            <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                Round finished
-            </Typography>
-        </>
-    );
+export default function DashEndRound({room}) {
+    return <RoundSummary room={room} />;
 }
