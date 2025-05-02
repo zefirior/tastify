@@ -53,7 +53,7 @@ export default function RoundSummary({room}) {
                                 Round Suggester: <Box component="span" sx={{ fontWeight: 'bold' }}>{suggester.nickname}</Box>{isCurrentPlayerSuggester ? ' (You)' : ''}
                             </Typography>
                             <Typography variant="body2">
-                                Selected Band: <Box component="span" sx={{ fontWeight: 'bold' }}>{currentRound.groupName}</Box>
+                                Selected Band: <Box component="span" sx={{ fontWeight: 'bold' }}>{currentRound.group.name}</Box>
                             </Typography>
                         </Box>
                         <Stack direction="row" spacing={2}>

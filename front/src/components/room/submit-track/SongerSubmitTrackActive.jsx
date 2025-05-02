@@ -45,7 +45,7 @@ export default function SongerSubmitTrackActive({room}) {
                         setSubmitOption={(value) => {
                             // Find the full option object by id or name
                             const option = nameOptions.find(opt => opt.id === value || opt.name === value);
-                            setSubmitOption(option);
+                            setSubmitOption(option.name);
                         }}
                         nameOptions={nameOptions}
                         optionBuilder={(option) => (

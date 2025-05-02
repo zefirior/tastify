@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 export default function SuggesterSubmitTrack({room}) {
-    const groupName = room.state.currentRound.groupName;
+    const groupName = room.state.currentRound.group.name;
 
     return (
         <>

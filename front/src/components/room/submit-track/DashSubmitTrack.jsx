@@ -18,7 +18,7 @@ export default function DashSubmitTrack({room}) {
         return !hasSubmitted && !isSuggester;
     }) || [];
 
-    const suggesterNick = room.state.currentRound.suggester.nickname.toUpperCase();
+    const suggesterNick = room.state.currentRound.suggester.nickname;
     const groupName = room.state.currentRound.group?.name || '';
     return (
         <Box>
