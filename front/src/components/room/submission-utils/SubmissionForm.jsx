@@ -6,7 +6,8 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import SendIcon from "@mui/icons-material/Send";
 
-export default function SubmissionForm({submitOption, setSubmitOption, nameOptions, optionBuilder, onClick}) {
+export default function SubmissionForm({selectedKey, setSelectedKey, nameOptions, optionBuilder, onClick}) {
+    console.log("selectedKey", selectedKey);
     return(
         <>
             <FormControl fullWidth>
@@ -14,9 +15,9 @@ export default function SubmissionForm({submitOption, setSubmitOption, nameOptio
                 <Select
                     id="name-suggestion"
                     variant="outlined"
-                    value={submitOption}
+                    value={selectedKey || ""}
                     label="Choose one option"
-                    onChange={(e) => setSubmitOption(e.target.value)}
+                    onChange={(e) => setSelectedKey(e.target.value)}
                 >
                     {nameOptions.map((option) => optionBuilder(option))}
                 </Select>

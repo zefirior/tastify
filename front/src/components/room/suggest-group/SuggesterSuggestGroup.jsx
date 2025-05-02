@@ -8,7 +8,7 @@ import Box from "@mui/material/Box";
 export default function SuggesterSuggestGroup({room}) {
     const [searchName, setSearchName] = React.useState('');
     const [nameOptions, setNameOptions] = React.useState([]);
-    const [submitOption, setSubmitOption] = React.useState(null);
+    const [selectedKey, setSelectedKey] = React.useState(null);
 
     return (
         <>
@@ -29,12 +29,8 @@ export default function SuggesterSuggestGroup({room}) {
             {nameOptions.length >0 && (
                 <Box>
                     <SubmissionForm
-                        submitOption={submitOption}
-                        setSubmitOption={(value) => {
-                            // Find the full option object by id or name
-                            const option = nameOptions.find(opt => opt.id === value || opt.name === value);
-                            setSubmitOption(option);
-                        }}
+                        selectedKey={selectedKey}
+                        setSelectedKey={(key) => setSelectedKey(key)}
                         nameOptions={nameOptions}
                         optionBuilder={(option) => (
                             <MenuItem key={option.id} value={option.id}>
@@ -42,8 +38,9 @@ export default function SuggesterSuggestGroup({room}) {
                             </MenuItem>
                         )}
                         onClick={() => {
-                            if (submitOption) {
-                                Client.submitGroup(room.code, submitOption)
+                            if (selectedKey) {
+                                const option = nameOptions.find(opt => opt.id === selectedKey);
+                                Client.submitGroup(room.code, option)
                                     .then(r => console.group('submitted group', r));
                             }
                         }}
