@@ -1,0 +1,27 @@
+name: Deploy to Remote
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd tastify
+            git fetch
+            git reset --hard origin/${{ github.head_ref || github.ref_name }}
+            docker compose --file ./docker/remote.docker-compose.yaml stop
+            docker compose --file ./docker/remote.docker-compose.yaml up --build -d
+

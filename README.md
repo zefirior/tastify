@@ -15,10 +15,13 @@ open http://localhost:5173
 ```
 
 ## Deploying the App
-Update remote through ssh
+Update the remote server manually with:
 ```bash
 bash ./scripts/update_remote.sh
 ```
+Deployment is also triggered automatically by GitHub Actions when pushing to
+`main` or updating a pull request. The workflow connects to the server over SSH
+and runs the same update commands.
 
 ## Test
 1. Install requirements
