@@ -20,6 +20,7 @@ services:
     build:
       context: ..
       dockerfile: docker/back.dockerfile
+    env_file: "/home/tastify/.env"
     environment:
       DB_URL: "postgresql+asyncpg://postgres@db:5432/postgres"
     depends_on:
