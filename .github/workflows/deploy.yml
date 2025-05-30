@@ -20,8 +20,13 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd tastify
-            git fetch
-            git reset --hard origin/${{ github.ref_name }}
+            git fetch --depth=1 origin ${{ github.sha }}
+            git reset --hard ${{ github.sha }}
             docker compose --file ./docker/remote.docker-compose.yaml stop
-            docker compose --file ./docker/remote.docker-compose.yaml up --build -d
+            docker container prune -f
+            docker volume prune -f
+            docker compose --file ./docker/remote.docker-compose.yaml up --build -d || {
+              docker compose --file ./docker/remote.docker-compose.yaml logs --tail=50 migrate
+              exit 1
+            }
 
