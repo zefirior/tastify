@@ -26,7 +26,7 @@ jobs:
             docker container prune -f
             docker volume prune -f
               docker compose --file ./docker/remote.docker-compose.yaml up --build -d || {
-                docker compose --file ./docker/remote.docker-compose.yaml logs --tail=200
+                docker compose --file ./docker/remote.docker-compose.yaml logs --tail=400
                 exit 1
               }
 
