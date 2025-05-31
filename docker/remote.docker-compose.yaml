@@ -3,9 +3,10 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata2:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     expose:
@@ -20,8 +21,9 @@ services:
     build:
       context: ..
       dockerfile: docker/back.dockerfile
+    env_file: "/home/tastify/.env"
     environment:
-      DB_URL: "postgresql+asyncpg://postgres@db:5432/postgres"
+      DB_URL: "postgresql+asyncpg://test_user:test_password@db:5432/postgres"
     depends_on:
       db:
         condition: service_healthy
@@ -33,7 +35,7 @@ services:
       dockerfile: docker/back.dockerfile
     env_file: "/home/tastify/.env"
     environment:
-      DB_URL: "postgresql+asyncpg://postgres@db:5432/postgres"
+      DB_URL: "postgresql+asyncpg://test_user:test_password@db:5432/postgres"
     depends_on:
       db:
         condition: service_healthy
@@ -56,4 +58,4 @@ services:
 
 
 volumes:
-  pgdata:
+  pgdata2:
