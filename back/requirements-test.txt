@@ -1,7 +1,0 @@
-pytest
-pytest-asyncio
-testcontainers[postgres]
-black
-flake8-awesome
-unify
-pytest-mock
