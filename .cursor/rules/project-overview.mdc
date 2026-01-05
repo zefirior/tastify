@@ -1,0 +1,111 @@
+---
+alwaysApply: true
+---
+# Tastify Project Overview
+
+## Purpose
+
+Tastify is a collaborative multiplayer game for sharing music tastes. Players join rooms, suggest bands, and earn points based on popularity.
+
+**Current MVP**: "Guess the Number" - a simplified game to test the infrastructure where players guess a randomly generated number (1-100). Closest guess wins.
+
+## Project Structure
+
+```
+/back                    - FastAPI backend (Python 3.12+)
+  /src
+    /api                 - REST and WebSocket endpoints
+    /models              - SQLAlchemy ORM models
+    /schemas             - Pydantic request/response schemas
+    /services            - Business logic layer
+    /jobs                - Background jobs with advisory locks
+    /db                  - Database configuration
+  /migrations            - Alembic database migrations
+  /tests                 - pytest tests with testcontainers
+
+/front                   - React frontend (TypeScript)
+  /src
+    /api                 - API client and WebSocket client
+    /stores              - MobX state management
+    /pages               - Page components (Home, Lobby, Game, Results)
+    /types               - TypeScript type definitions
+  /tests                 - Playwright E2E tests
+
+/docker                  - Docker Compose configurations
+  docker-compose.yaml    - Local development (all services)
+  remote.docker-compose.yaml - Production deployment
+
+/scripts                 - Utility bash scripts
+  common.sh              - Shared utilities (colors, logging, paths)
+  run-tests.sh           - Test runner for backend and frontend
+```
+
+## Running the Project
+
+### Full Stack (Recommended)
+
+Start all services with Docker Compose:
+
+```bash
+docker compose -f docker/docker-compose.yaml up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+- PostgreSQL: localhost:5432
+
+### Manual Setup
+
+1. Start database only:
+   ```bash
+   docker compose -f docker/docker-compose.yaml up postgres -d
+   ```
+
+2. Backend:
+   ```bash
+   cd back
+   uv sync
+   uv run alembic upgrade head
+   uv run uvicorn src.main:app --reload
+   ```
+
+3. Frontend:
+   ```bash
+   cd front
+   npm install
+   npm run dev
+   ```
+
+## Running Tests
+
+### All Tests
+```bash
+./scripts/run-tests.sh
+```
+
+### Backend Only
+```bash
+./scripts/run-tests.sh --backend-only
+# Or directly:
+cd back && uv run pytest -v
+```
+
+### Frontend Only
+```bash
+./scripts/run-tests.sh --frontend-only
+```
+
+### E2E Tests (Playwright)
+```bash
+./scripts/run-tests.sh --e2e
+# Or directly:
+cd front && npm run test
+```
+
+## Key Technologies
+
+- **Backend**: FastAPI, SQLAlchemy (async), asyncpg, Alembic, Pydantic
+- **Frontend**: React 19, Vite, MobX, TailwindCSS v4
+- **Database**: PostgreSQL 16
+- **Testing**: pytest + testcontainers (backend), Playwright (frontend)
+- **Real-time**: WebSocket for live game updates

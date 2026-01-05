@@ -1,0 +1,162 @@
+---
+description: Rule describing the structure and behavior of background job workers in 'back/src/jobs', including advisory locking, job lifecycle, architecture, and FastAPI application integration.
+alwaysApply: false
+---
+# Background Jobs
+
+## Overview
+
+Background jobs run embedded in the FastAPI application and are started during app lifespan. They use PostgreSQL advisory locks (`pg_advisory_xact_lock`) to ensure only one instance runs at a time, even across multiple application replicas.
+
+## Architecture
+
+```
+src/jobs/
+  base.py          - BaseJob abstract class
+  game_timer.py    - GameTimerJob implementation
+  __init__.py      - Exports
+```
+
+Jobs are started in `src/main.py` within the lifespan context manager.
+
+## How Jobs Work
+
+1. Job runs in an infinite loop with configurable sleep interval
+2. Each iteration acquires a PostgreSQL advisory lock (non-blocking)
+3. If lock is acquired, executes the job logic within a transaction
+4. Lock is automatically released when transaction ends
+5. Sleeps for the configured interval before next iteration
+
+```python
+# Simplified flow
+while True:
+    async with session:
+        lock_acquired = await session.execute(
+            "SELECT pg_try_advisory_xact_lock(:lock_id)"
+        )
+        if lock_acquired:
+            await self.execute(session)
+            await session.commit()
+    await asyncio.sleep(self.interval_seconds)
+```
+
+## Existing Jobs
+
+### GameTimerJob (`lock_id: 1001`)
+- **Purpose**: Checks for rounds that exceeded time limit (30 seconds)
+- **Interval**: 1 second
+- **Actions**: 
+  - Finishes expired rounds
+  - Calculates and awards points
+  - Broadcasts results via WebSocket
+  - Starts next round or ends game
+
+## Adding a New Job
+
+1. **Create job file** in `src/jobs/`:
+
+```python
+# src/jobs/my_new_job.py
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.jobs.base import BaseJob
+
+class MyNewJob(BaseJob):
+    # Unique lock ID - pick a number not used by other jobs
+    lock_id = 1002
+    
+    # How often to run (seconds)
+    interval_seconds = 5.0
+    
+    # Name for logging
+    job_name = "MyNewJob"
+
+    async def execute(self, session: AsyncSession):
+        """
+        Job logic here. Session is already in a transaction
+        with advisory lock held.
+        """
+        # Query database
+        result = await session.execute(...)
+        
+        # Do work
+        ...
+        
+        # Changes are committed automatically after execute() returns
+```
+
+2. **Export from `__init__.py`**:
+
+```python
+# src/jobs/__init__.py
+from src.jobs.base import BaseJob
+from src.jobs.game_timer import GameTimerJob
+from src.jobs.my_new_job import MyNewJob
+
+__all__ = ["BaseJob", "GameTimerJob", "MyNewJob"]
+```
+
+3. **Register in `main.py`**:
+
+```python
+# src/main.py
+from src.jobs.my_new_job import MyNewJob
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start background jobs
+    game_timer_job = GameTimerJob()
+    my_new_job = MyNewJob()
+    
+    job_tasks = [
+        asyncio.create_task(game_timer_job.run()),
+        asyncio.create_task(my_new_job.run()),
+    ]
+    
+    yield
+    
+    # Cleanup
+    for task in job_tasks:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+```
+
+## Configuration
+
+Job settings can be added to `src/config.py`:
+
+```python
+class Settings(BaseSettings):
+    my_new_job_interval: float = 5.0
+```
+
+Then use in job:
+
+```python
+from src.config import settings
+
+class MyNewJob(BaseJob):
+    interval_seconds = settings.my_new_job_interval
+```
+
+## Lock ID Registry
+
+Keep track of lock IDs to avoid conflicts:
+
+| Lock ID | Job Name      | Description                    |
+|---------|---------------|--------------------------------|
+| 1001    | GameTimerJob  | Round timer and score calc     |
+| 1002    | (available)   | -                              |
+
+## Testing Jobs
+
+Jobs can be tested by calling `execute()` directly with a test session:
+
+```python
+async def test_my_job(session: AsyncSession):
+    job = MyNewJob()
+    await job.execute(session)
+    # Assert expected changes
+```

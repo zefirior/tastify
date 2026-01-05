@@ -7,10 +7,34 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Frontend
 front/node_modules
-dist
-dist-ssr
+front/dist
+front/dist-ssr
+front/playwright-report
+front/test-results
 *.local
+
+# Backend
+back/.cache
+back/.pytest_cache
+back/.ruff_cache
+back/htmlcov
+back/.coverage
+*.egg-info
+
+# Python
+.python-version
+venv
+.venv
+__pycache__
+*.pyc
+*.pyo
+
+# Environment
+.env
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*
@@ -22,11 +46,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-back/.cache
 
-# python
-.python-version
-venv
-.venv
-.env
-__pycache__
+# Docker
+postgres_data/
+
+# uv
+.uv/
+uv.lock

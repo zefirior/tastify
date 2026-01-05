@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tastify-postgres
+    environment:
+      POSTGRES_USER: tastify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tastify}
+      POSTGRES_DB: tastify
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tastify -d tastify"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../back
+      dockerfile: Dockerfile
+    container_name: tastify-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tastify:${POSTGRES_PASSWORD:-tastify}@postgres:5432/tastify
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../front
+      dockerfile: Dockerfile
+    container_name: tastify-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
