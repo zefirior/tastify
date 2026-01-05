@@ -1,0 +1,23 @@
+# Game Configuration
+# Define which games are available and their settings
+
+games:
+  guess_number:
+    enabled: true
+    default: true
+    display_name: "Guess the Number"
+    description: "Players guess a randomly generated number (1-100). Closest guess wins!"
+    settings:
+      min_target: 1
+      max_target: 100
+      round_duration_seconds: 30
+      total_rounds: 3
+      between_rounds_delay_seconds: 5
+
+  # Example of a future game (disabled):
+  # music_taste:
+  #   enabled: false
+  #   default: false
+  #   display_name: "Music Taste"
+  #   description: "Players suggest bands and earn points based on popularity"
+

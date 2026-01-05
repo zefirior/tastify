@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -65,8 +66,27 @@ async def session(test_engine) -> AsyncGenerator[AsyncSession, None]:
         await trans.rollback()
 
 
+@pytest.fixture(scope="session")
+def games_config_path():
+    """Path to the games config file."""
+    return Path(__file__).parent.parent / "games.yaml"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_game_registry(games_config_path):
+    """Initialize the game registry before tests."""
+    from src.games.registry import game_registry, register_all_games
+    
+    # Load config and register games
+    game_registry.load_config(games_config_path)
+    register_all_games()
+    game_registry.validate_registration()
+    
+    yield
+
+
 @pytest_asyncio.fixture
-async def client(test_engine, monkeypatch) -> AsyncGenerator[AsyncClient, None]:
+async def client(test_engine, monkeypatch, setup_game_registry) -> AsyncGenerator[AsyncClient, None]:
     """Create a test HTTP client with mocked database."""
     from src import db
     from src.main import app
@@ -82,4 +102,3 @@ async def client(test_engine, monkeypatch) -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
-

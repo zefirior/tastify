@@ -31,6 +31,7 @@ class Room(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(6), unique=True, index=True, default=generate_room_code)
+    game_type: Mapped[str] = mapped_column(String(50), default="guess_number", index=True)
     status: Mapped[RoomStatus] = mapped_column(Enum(RoomStatus), default=RoomStatus.WAITING)
     host_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     current_round_number: Mapped[int] = mapped_column(Integer, default=0)

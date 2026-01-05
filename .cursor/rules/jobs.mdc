@@ -10,11 +10,17 @@ Background jobs run embedded in the FastAPI application and are started during a
 
 ## Architecture
 
+Jobs are split into two categories:
+
 ```
-src/jobs/
-  base.py          - BaseJob abstract class
-  game_timer.py    - GameTimerJob implementation
-  __init__.py      - Exports
+src/jobs/                         # General jobs (work for all games)
+  base.py                         # BaseJob abstract class
+  room_cleanup.py                 # RoomCleanupJob - closes inactive rooms
+  __init__.py
+
+src/games/guess_number/jobs/      # Game-specific jobs
+  timer.py                        # GuessNumberTimerJob - round timing
+  __init__.py
 ```
 
 Jobs are started in `src/main.py` within the lifespan context manager.
@@ -42,16 +48,33 @@ while True:
 
 ## Existing Jobs
 
-### GameTimerJob (`lock_id: 1001`)
-- **Purpose**: Checks for rounds that exceeded time limit (30 seconds)
-- **Interval**: 1 second
+### General Jobs (src/jobs/)
+
+#### RoomCleanupJob (`lock_id: 1002`)
+- **Purpose**: Closes rooms that have been inactive for too long
+- **Interval**: 1 hour (configurable via `room_cleanup_job_interval`)
 - **Actions**: 
-  - Finishes expired rounds
+  - Finds rooms in WAITING or PLAYING status with old `updated_at`
+  - Sets status to ABANDONED
+  - Broadcasts ROOM_CLOSED event via WebSocket
+
+### Game-Specific Jobs
+
+#### GuessNumberTimerJob (`lock_id: 1001`)
+- **Location**: `src/games/guess_number/jobs/timer.py`
+- **Purpose**: Manages round timing for Guess the Number game
+- **Interval**: 1 second (configurable via `game_timer_job_interval`)
+- **Actions**: 
+  - Finishes rounds when time expires or all players voted
   - Calculates and awards points
   - Broadcasts results via WebSocket
-  - Starts next round or ends game
+  - Starts next round after delay or ends game
+- **Game settings used** (from `games.yaml`):
+  - `round_duration_seconds` - how long each round lasts
+  - `between_rounds_delay_seconds` - pause between rounds
+  - `total_rounds` - number of rounds before game ends
 
-## Adding a New Job
+## Adding a New General Job
 
 1. **Create job file** in `src/jobs/`:
 
@@ -62,7 +85,7 @@ from src.jobs.base import BaseJob
 
 class MyNewJob(BaseJob):
     # Unique lock ID - pick a number not used by other jobs
-    lock_id = 1002
+    lock_id = 1003
     
     # How often to run (seconds)
     interval_seconds = 5.0
@@ -89,10 +112,10 @@ class MyNewJob(BaseJob):
 ```python
 # src/jobs/__init__.py
 from src.jobs.base import BaseJob
-from src.jobs.game_timer import GameTimerJob
+from src.jobs.room_cleanup import RoomCleanupJob
 from src.jobs.my_new_job import MyNewJob
 
-__all__ = ["BaseJob", "GameTimerJob", "MyNewJob"]
+__all__ = ["BaseJob", "RoomCleanupJob", "MyNewJob"]
 ```
 
 3. **Register in `main.py`**:
@@ -104,51 +127,65 @@ from src.jobs.my_new_job import MyNewJob
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start background jobs
-    game_timer_job = GameTimerJob()
     my_new_job = MyNewJob()
     
-    job_tasks = [
-        asyncio.create_task(game_timer_job.run()),
+    tasks = [
         asyncio.create_task(my_new_job.run()),
+        # ... other tasks
     ]
     
     yield
     
     # Cleanup
-    for task in job_tasks:
+    for task in tasks:
         task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+```
+
+## Adding a Game-Specific Job
+
+Game-specific jobs should live in the game's directory. See the Games Architecture rule (`games.mdc`) for full instructions.
+
+```
+src/games/my_game/
+  jobs/
+    __init__.py
+    timer.py        # MyGameTimerJob
+```
+
+**Key difference**: Game-specific jobs should filter by `game_type` to only process rooms for their game:
+
+```python
+result = await session.execute(
+    select(Room).where(
+        Room.status == RoomStatus.PLAYING,
+        Room.game_type == "my_game",  # Filter by game type!
+    )
+)
 ```
 
 ## Configuration
 
-Job settings can be added to `src/config.py`:
+Job settings are in `src/config.py`:
 
 ```python
 class Settings(BaseSettings):
-    my_new_job_interval: float = 5.0
+    # Job intervals
+    game_timer_job_interval: float = 1.0
+    room_cleanup_job_interval: float = 3600.0  # 1 hour
+    room_inactivity_threshold_hours: int = 24
 ```
 
-Then use in job:
-
-```python
-from src.config import settings
-
-class MyNewJob(BaseJob):
-    interval_seconds = settings.my_new_job_interval
-```
+Game-specific settings (like `round_duration_seconds`) should go in `games.yaml` under the game's `settings` section.
 
 ## Lock ID Registry
 
 Keep track of lock IDs to avoid conflicts:
 
-| Lock ID | Job Name      | Description                    |
-|---------|---------------|--------------------------------|
-| 1001    | GameTimerJob  | Round timer and score calc     |
-| 1002    | (available)   | -                              |
+| Lock ID | Job Name              | Location                           | Description                |
+|---------|-----------------------|------------------------------------|----------------------------|
+| 1001    | GuessNumberTimerJob   | src/games/guess_number/jobs/timer.py | Round timer for guess_number |
+| 1002    | RoomCleanupJob        | src/jobs/room_cleanup.py           | Closes inactive rooms      |
+| 1003    | (available)           | -                                  | -                          |
 
 ## Testing Jobs
 
@@ -159,4 +196,15 @@ async def test_my_job(session: AsyncSession):
     job = MyNewJob()
     await job.execute(session)
     # Assert expected changes
+```
+
+For game-specific jobs, make sure to create rooms with the correct `game_type`:
+
+```python
+async def test_guess_number_timer(session: AsyncSession):
+    # Create room with game_type="guess_number"
+    room = Room(game_type="guess_number", ...)
+    
+    job = GuessNumberTimerJob()
+    await job.execute(session)
 ```

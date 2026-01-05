@@ -1,29 +1,33 @@
+import type { GameType } from '@/types'
+
 type MessageHandler = (event: string, data: unknown) => void
 
 class WebSocketClient {
   private ws: WebSocket | null = null
   private roomCode: string | null = null
   private playerId: number | null = null
+  private gameType: GameType | null = null
   private messageHandler: MessageHandler | null = null
   private reconnectAttempts = 0
   private maxReconnectAttempts = 5
   private reconnectDelay = 1000
   private pingInterval: number | null = null
 
-  connect(roomCode: string, playerId: number, onMessage: MessageHandler): void {
+  connect(roomCode: string, playerId: number, gameType: GameType, onMessage: MessageHandler): void {
     this.roomCode = roomCode
     this.playerId = playerId
+    this.gameType = gameType
     this.messageHandler = onMessage
     this.reconnectAttempts = 0
     this.doConnect()
   }
 
   private doConnect(): void {
-    if (!this.roomCode || !this.playerId) return
+    if (!this.roomCode || !this.playerId || !this.gameType) return
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = window.location.host
-    const url = `${protocol}//${host}/api/rooms/${this.roomCode}/ws?player_id=${this.playerId}`
+    const url = `${protocol}//${host}/api/games/${this.gameType}/rooms/${this.roomCode}/ws?player_id=${this.playerId}`
 
     console.log('Connecting to WebSocket:', url)
     this.ws = new WebSocket(url)
@@ -70,7 +74,7 @@ class WebSocketClient {
     console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`)
 
     setTimeout(() => {
-      if (this.roomCode && this.playerId) {
+      if (this.roomCode && this.playerId && this.gameType) {
         this.doConnect()
       }
     }, delay)
@@ -111,6 +115,7 @@ class WebSocketClient {
     }
     this.roomCode = null
     this.playerId = null
+    this.gameType = null
     this.messageHandler = null
     this.reconnectAttempts = this.maxReconnectAttempts // Prevent reconnect
   }

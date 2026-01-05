@@ -72,12 +72,23 @@ export const GamePage = observer(() => {
 
       {/* Main content */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
-        {/* Timer */}
+        {/* Timer or Next Round indicator */}
         <div className="mb-8 animate-slide-up">
-          <div className={`text-8xl font-bold font-mono ${timerColor} transition-colors`}>
-            {timeLeft}
-          </div>
-          <p className="text-center text-ash mt-2">seconds remaining</p>
+          {lastRoundResult ? (
+            <>
+              <div className="text-4xl font-bold text-electric text-center">
+                Round Complete!
+              </div>
+              <p className="text-center text-ash mt-2">Next round starting soon...</p>
+            </>
+          ) : (
+            <>
+              <div className={`text-8xl font-bold font-mono ${timerColor} transition-colors`}>
+                {timeLeft}
+              </div>
+              <p className="text-center text-ash mt-2">seconds remaining</p>
+            </>
+          )}
         </div>
 
         {/* Guess input */}
@@ -108,8 +119,8 @@ export const GamePage = observer(() => {
           </form>
         )}
 
-        {/* Waiting state after guess */}
-        {isRoundActive && hasGuessed && (
+        {/* Waiting state after guess - only show if no round results yet */}
+        {isRoundActive && hasGuessed && !lastRoundResult && (
           <div className="text-center animate-slide-up">
             <div className="bg-obsidian/80 backdrop-blur-xl rounded-2xl p-8 border border-smoke">
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-mint to-mint-bright flex items-center justify-center">

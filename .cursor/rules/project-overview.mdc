@@ -5,20 +5,30 @@ alwaysApply: true
 
 ## Purpose
 
-Tastify is a collaborative multiplayer game for sharing music tastes. Players join rooms, suggest bands, and earn points based on popularity.
+Tastify is a collaborative multiplayer game platform for sharing music tastes. Players join rooms, play various games, and earn points.
 
-**Current MVP**: "Guess the Number" - a simplified game to test the infrastructure where players guess a randomly generated number (1-100). Closest guess wins.
+The platform supports multiple games through a pluggable architecture. Each game has its own logic, API routes, and configuration.
+
+**Current Games**:
+- **Guess the Number** (default) - Players guess a randomly generated number (1-100). Closest guess wins.
 
 ## Project Structure
 
 ```
 /back                    - FastAPI backend (Python 3.12+)
+  games.yaml             - Game configuration (enabled games, defaults, settings)
   /src
-    /api                 - REST and WebSocket endpoints
+    /api                 - Legacy REST and WebSocket endpoints
+    /games               - Game implementations (pluggable architecture)
+      /base.py           - BaseGame abstract class
+      /registry.py       - GameRegistry for managing games
+      /router.py         - Generic game router factory
+      /guess_number/     - Guess the Number game implementation
+        /jobs/           - Game-specific background jobs (timer, etc.)
     /models              - SQLAlchemy ORM models
     /schemas             - Pydantic request/response schemas
     /services            - Business logic layer
-    /jobs                - Background jobs with advisory locks
+    /jobs                - General background jobs (room cleanup, etc.)
     /db                  - Database configuration
   /migrations            - Alembic database migrations
   /tests                 - pytest tests with testcontainers
@@ -40,6 +50,25 @@ Tastify is a collaborative multiplayer game for sharing music tastes. Players jo
   run-tests.sh           - Test runner for backend and frontend
 ```
 
+## API Structure
+
+### Games API (New)
+
+The new games API uses a unified structure for all games:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/games` | List available games and default game |
+| `POST /api/games/{game}/rooms` | Create room for specific game |
+| `POST /api/games/{game}/rooms/{code}/join` | Join room |
+| `GET /api/games/{game}/rooms/{code}` | Get room state |
+| `POST /api/games/{game}/rooms/{code}/actions` | Execute game-specific action |
+| `WS /api/games/{game}/rooms/{code}/ws` | WebSocket connection |
+
+### Legacy API
+
+The legacy API (`/api/rooms/...`) is preserved for backward compatibility but uses the default game type.
+
 ## Running the Project
 
 ### Full Stack (Recommended)
@@ -52,6 +81,7 @@ docker compose -f docker/docker-compose.yaml up --build
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 - PostgreSQL: localhost:5432
 
 ### Manual Setup
@@ -111,15 +141,15 @@ cd front && npm run test
 ### Running Specific Tests
 ```bash
 # Run a specific test file
-cd back && uv run pytest tests/test_room_cleanup.py -v
+cd back && uv run pytest tests/test_game_registry.py -v
 
 # Run a specific test
-cd back && uv run pytest "tests/test_room_service.py::TestRoomService::test_create_room" -v
+cd back && uv run pytest "tests/test_games_api.py::TestExecuteAction::test_start_game_action" -v
 ```
 
 ## Key Technologies
 
-- **Backend**: FastAPI, SQLAlchemy (async), asyncpg, Alembic, Pydantic
+- **Backend**: FastAPI, SQLAlchemy (async), asyncpg, Alembic, Pydantic, PyYAML
 - **Frontend**: React 19, Vite, MobX, TailwindCSS v4
 - **Database**: PostgreSQL 16
 - **Testing**: pytest + testcontainers (backend), Playwright (frontend)

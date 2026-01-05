@@ -1,0 +1,368 @@
+---
+description: Rule describing the game architecture and how to add new games to the Tastify platform.
+globs:
+  - back/src/games/**
+  - back/games.yaml
+---
+# Game Architecture
+
+Tastify supports multiple games through a pluggable architecture. Each game implements a common interface and is registered in the game registry.
+
+## Architecture Overview
+
+```
+back/
+  games.yaml                    # Game configuration
+  src/games/
+    __init__.py
+    base.py                     # BaseGame ABC + action schemas
+    registry.py                 # GameRegistry singleton
+    router.py                   # Generic router factory
+    guess_number/               # Example game implementation
+      __init__.py
+      game.py                   # Game logic
+      schemas.py                # Action schemas
+      jobs/                     # Game-specific background jobs
+        __init__.py
+        timer.py                # GuessNumberTimerJob
+```
+
+## Game Configuration (`games.yaml`)
+
+```yaml
+games:
+  guess_number:
+    enabled: true
+    default: true
+    display_name: "Guess the Number"
+    description: "Players guess a number between 1-100"
+    settings:
+      min_target: 1
+      max_target: 100
+      round_duration_seconds: 30
+      total_rounds: 3
+      between_rounds_delay_seconds: 5
+```
+
+### Configuration Rules
+
+- **Exactly one game** must be marked as `default: true`
+- **Default game must be enabled** (`enabled: true`)
+- **At least one game** must be enabled
+- App fails to start if configuration is invalid
+
+## Adding a New Game
+
+### Step 1: Create Game Directory
+
+```bash
+mkdir -p back/src/games/my_new_game
+touch back/src/games/my_new_game/__init__.py
+touch back/src/games/my_new_game/game.py
+touch back/src/games/my_new_game/schemas.py
+```
+
+### Step 2: Define Action Schemas (`schemas.py`)
+
+```python
+from enum import Enum
+from pydantic import Field
+from src.games.base import GameAction
+
+
+class ActionType(str, Enum):
+    """Available actions for this game."""
+    START_GAME = "start_game"
+    MY_ACTION = "my_action"  # Game-specific action
+
+
+class MyNewGameAction(GameAction):
+    """Action schema for the game."""
+    action: ActionType
+    # Add game-specific fields
+    my_field: int | None = Field(default=None, ge=1, le=100)
+```
+
+### Step 3: Implement Game Class (`game.py`)
+
+```python
+from typing import Any
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.games.base import BaseGame, GameAction, ActionResult, RoundResult
+from src.games.my_new_game.schemas import MyNewGameAction, ActionType
+from src.models import Room, GameRound, RoomStatus, RoundStatus
+
+
+class MyNewGame(BaseGame):
+    """My new game implementation."""
+
+    @property
+    def game_type(self) -> str:
+        return "my_new_game"  # Must match config key
+
+    @property
+    def display_name(self) -> str:
+        return "My New Game"
+
+    @property
+    def action_schema(self) -> type[GameAction]:
+        return MyNewGameAction
+
+    def get_available_actions(self) -> list[dict[str, Any]]:
+        """Return actions for Swagger documentation."""
+        return [
+            {
+                "name": "start_game",
+                "description": "Start the game (host only)",
+                "fields": [],
+            },
+            {
+                "name": "my_action",
+                "description": "Perform game-specific action",
+                "fields": [
+                    {"name": "my_field", "type": "integer", "required": True}
+                ],
+            },
+        ]
+
+    async def create_round(
+        self,
+        room: Room,
+        session: AsyncSession,
+        settings: dict[str, Any] | None = None,
+    ) -> GameRound:
+        """Create a new game round."""
+        settings = settings or {}
+        
+        game_round = GameRound(
+            round_number=room.current_round_number,
+            target_number=None,  # Set game-specific data
+            status=RoundStatus.ACTIVE,
+        )
+        room.rounds.append(game_round)
+        await session.flush()
+        
+        # Reset player state for new round
+        for player in room.players:
+            player.current_guess = None
+        
+        return game_round
+
+    async def execute_action(
+        self,
+        room: Room,
+        player_id: int,
+        action: GameAction,
+        session: AsyncSession,
+    ) -> ActionResult:
+        """Execute a game action."""
+        if not isinstance(action, MyNewGameAction):
+            return ActionResult(success=False, message="Invalid action")
+
+        if action.action == ActionType.START_GAME:
+            return await self._handle_start_game(room, player_id, session)
+        elif action.action == ActionType.MY_ACTION:
+            return await self._handle_my_action(room, player_id, action, session)
+        
+        return ActionResult(success=False, message="Unknown action")
+
+    async def _handle_start_game(
+        self, room: Room, player_id: int, session: AsyncSession
+    ) -> ActionResult:
+        """Handle start_game action."""
+        if room.host_id != player_id:
+            return ActionResult(success=False, message="Only host can start")
+        
+        can_start, error = self.can_start_game(room)
+        if not can_start:
+            return ActionResult(success=False, message=error)
+        
+        room.status = RoomStatus.PLAYING
+        room.current_round_number = 1
+        await self.create_round(room, session)
+        
+        return ActionResult(
+            success=True,
+            message="Game started",
+            broadcast_event="game_started",
+        )
+
+    async def _handle_my_action(
+        self, room: Room, player_id: int, action: MyNewGameAction, session: AsyncSession
+    ) -> ActionResult:
+        """Handle game-specific action."""
+        # Implement your game logic here
+        return ActionResult(success=True, message="Action completed")
+
+    async def finish_round(self, room: Room, session: AsyncSession) -> RoundResult:
+        """Finish the current round and calculate scores."""
+        # Implement scoring logic
+        return RoundResult(round_number=room.current_round_number, results=[])
+```
+
+### Step 4: Export from `__init__.py`
+
+```python
+from src.games.my_new_game.game import MyNewGame
+from src.games.my_new_game.schemas import MyNewGameAction, ActionType
+
+__all__ = ["MyNewGame", "MyNewGameAction", "ActionType"]
+```
+
+### Step 4.5: Add Game-Specific Jobs (Optional)
+
+If your game needs background processing (timers, round management, etc.), create a `jobs/` folder:
+
+```bash
+mkdir -p back/src/games/my_new_game/jobs
+touch back/src/games/my_new_game/jobs/__init__.py
+touch back/src/games/my_new_game/jobs/timer.py
+```
+
+Create the job (`jobs/timer.py`):
+
+```python
+from src.config import settings
+from src.games.registry import game_registry
+from src.jobs.base import BaseJob
+from src.models import Room, RoomStatus
+
+class MyNewGameTimerJob(BaseJob):
+    lock_id = 1003  # Unique lock ID
+    interval_seconds = settings.game_timer_job_interval
+    job_name = "MyNewGameTimerJob"
+
+    async def execute(self, session: AsyncSession):
+        # Filter by game_type to only process this game's rooms
+        result = await session.execute(
+            select(Room).where(
+                Room.status == RoomStatus.PLAYING,
+                Room.game_type == "my_new_game",
+            )
+        )
+        # Process rooms...
+```
+
+Export from `jobs/__init__.py`:
+
+```python
+from src.games.my_new_game.jobs.timer import MyNewGameTimerJob
+__all__ = ["MyNewGameTimerJob"]
+```
+
+Add to main game `__init__.py`:
+
+```python
+from src.games.my_new_game.jobs import MyNewGameTimerJob
+__all__ = ["MyNewGame", "MyNewGameAction", "ActionType", "MyNewGameTimerJob"]
+```
+
+Register in `main.py`:
+
+```python
+from src.games.my_new_game import MyNewGameTimerJob
+
+# In lifespan:
+my_new_game_timer = MyNewGameTimerJob()
+tasks.append(asyncio.create_task(my_new_game_timer.run()))
+```
+
+### Step 5: Register the Game
+
+Edit `back/src/games/registry.py`:
+
+```python
+def register_all_games() -> None:
+    """Register all game implementations."""
+    from src.games.guess_number import GuessNumberGame
+    from src.games.my_new_game import MyNewGame  # Add import
+
+    game_registry.register(GuessNumberGame())
+    game_registry.register(MyNewGame())  # Register new game
+```
+
+### Step 6: Add to Configuration
+
+Edit `back/games.yaml`:
+
+```yaml
+games:
+  guess_number:
+    enabled: true
+    default: true
+    display_name: "Guess the Number"
+    # ...
+
+  my_new_game:
+    enabled: true
+    default: false
+    display_name: "My New Game"
+    description: "Description of my new game"
+    settings:
+      custom_setting: 42
+```
+
+### Step 7: Add Tests
+
+Create `back/tests/test_my_new_game.py`:
+
+```python
+import pytest
+from httpx import AsyncClient
+
+
+class TestMyNewGame:
+    async def test_create_room(self, client: AsyncClient):
+        response = await client.post(
+            "/api/games/my_new_game/rooms",
+            json={"player_name": "TestPlayer"},
+        )
+        assert response.status_code == 201
+        assert response.json()["room"]["game_type"] == "my_new_game"
+
+    async def test_my_action(self, client: AsyncClient):
+        # Create room and test game-specific actions
+        pass
+```
+
+## BaseGame Interface
+
+| Method | Description |
+|--------|-------------|
+| `game_type` | Unique identifier (must match config key) |
+| `display_name` | Human-readable name for UI |
+| `action_schema` | Pydantic schema for validating actions |
+| `get_available_actions()` | Return actions for API documentation |
+| `create_round()` | Create a new game round |
+| `execute_action()` | Handle game-specific actions |
+| `finish_round()` | Calculate scores and results |
+| `can_start_game()` | Check if game can be started (default: 2+ players) |
+| `on_player_join()` | Hook for player join events (optional) |
+| `on_player_leave()` | Hook for player leave events (optional) |
+
+## ActionResult Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | bool | Whether the action succeeded |
+| `message` | str | Success/error message |
+| `data` | dict | Additional data to return to caller |
+| `broadcast_event` | str | WebSocket event to broadcast |
+| `broadcast_data` | dict | Data to include in broadcast |
+
+## Frontend Integration
+
+When adding a new game, update the frontend:
+
+1. Add game type to `front/src/types/index.ts`:
+   ```typescript
+   export type GameType = 'guess_number' | 'my_new_game'
+   ```
+
+2. Create game-specific UI component if needed:
+   ```typescript
+   // front/src/pages/games/MyNewGamePage.tsx
+   ```
+
+3. Update `GamePage.tsx` to render the correct game UI based on `room.game_type`

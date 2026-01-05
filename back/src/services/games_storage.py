@@ -33,6 +33,7 @@ def _build_room_dict(room: Room, hide_target: bool = True) -> dict[str, Any]:
     return {
         "id": room.id,
         "code": room.code,
+        "game_type": room.game_type,
         "status": room.status.value,
         "host_id": room.host_id,
         "current_round_number": room.current_round_number,

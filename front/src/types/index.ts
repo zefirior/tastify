@@ -1,6 +1,9 @@
 export type RoomStatus = 'waiting' | 'playing' | 'finished'
 export type RoundStatus = 'active' | 'finished'
 
+// Available game types
+export type GameType = 'guess_number' // Add more as they are implemented
+
 export interface Player {
   id: number
   name: string
@@ -22,6 +25,7 @@ export interface GameRound {
 export interface Room {
   id: number
   code: string
+  game_type: GameType
   status: RoomStatus
   host_id: number | null
   current_round_number: number
@@ -39,6 +43,13 @@ export interface CreateRoomResponse {
 export interface JoinRoomResponse {
   room: Room
   player_id: number
+}
+
+export interface ActionResponse {
+  success: boolean
+  message: string | null
+  data: Record<string, unknown> | null
+  room: Room | null
 }
 
 export interface RoundResultPlayer {
@@ -61,6 +72,33 @@ export interface FinalStanding {
   score: number
 }
 
+// Game info from API
+export interface GameAction {
+  name: string
+  description: string
+  fields: {
+    name: string
+    type: string
+    required: boolean
+    min?: number
+    max?: number
+    description: string
+  }[]
+}
+
+export interface GameInfo {
+  game_type: GameType
+  display_name: string
+  description: string
+  is_default: boolean
+  actions: GameAction[]
+}
+
+export interface GamesInfoResponse {
+  games: GameInfo[]
+  default_game: GameType
+}
+
 // WebSocket event types
 export type WSEventType =
   | 'room_state'
@@ -79,4 +117,3 @@ export interface WSMessage<T = unknown> {
   event: WSEventType
   data: T
 }
-

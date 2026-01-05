@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx'
 import { api } from '@/api/client'
-import type { Room, Player, RoundResult, FinalStanding } from '@/types'
+import type { Room, Player, RoundResult, FinalStanding, GameType } from '@/types'
 import { wsClient } from '@/api/websocket'
 
 export type GameStatus = 'idle' | 'loading' | 'connected' | 'error'
@@ -46,12 +46,16 @@ class GameStore {
     return Math.ceil(remaining)
   }
 
-  async createRoom(playerName: string): Promise<void> {
+  get gameType(): GameType {
+    return this.room?.game_type ?? api.getDefaultGameType()
+  }
+
+  async createRoom(playerName: string, gameType?: GameType): Promise<void> {
     this.setStatus('loading')
     this.error = null
 
     try {
-      const response = await api.createRoom(playerName)
+      const response = await api.createRoom(playerName, gameType)
       runInAction(() => {
         this.room = response.room
         this.playerId = response.player_id
@@ -66,12 +70,12 @@ class GameStore {
     }
   }
 
-  async joinRoom(code: string, playerName: string): Promise<void> {
+  async joinRoom(code: string, playerName: string, gameType?: GameType): Promise<void> {
     this.setStatus('loading')
     this.error = null
 
     try {
-      const response = await api.joinRoom(code, playerName)
+      const response = await api.joinRoom(code, playerName, gameType)
       runInAction(() => {
         this.room = response.room
         this.playerId = response.player_id
@@ -90,7 +94,13 @@ class GameStore {
     if (!this.room || !this.playerId) return
 
     try {
-      await api.startGame(this.room.code, this.playerId)
+      const result = await api.startGame(this.room.code, this.playerId, this.room.game_type)
+      if (result.room) {
+        runInAction(() => {
+          this.room = result.room
+          this.lastRoundResult = null
+        })
+      }
       // Request updated state via WebSocket
       this.requestState()
     } catch (e) {
@@ -104,12 +114,38 @@ class GameStore {
     if (!this.room || !this.playerId) return
 
     try {
-      await api.submitGuess(this.room.code, this.playerId, guess)
+      const result = await api.submitGuess(this.room.code, this.playerId, guess, this.room.game_type)
+      if (result.room) {
+        runInAction(() => {
+          this.room = result.room
+        })
+      }
       // Request updated state via WebSocket
       this.requestState()
     } catch (e) {
       runInAction(() => {
         this.error = e instanceof Error ? e.message : 'Failed to submit guess'
+      })
+    }
+  }
+
+  /**
+   * Execute a generic game action
+   */
+  async executeAction(action: Record<string, unknown>): Promise<void> {
+    if (!this.room || !this.playerId) return
+
+    try {
+      const result = await api.executeAction(this.room.code, this.playerId, action, this.room.game_type)
+      if (result.room) {
+        runInAction(() => {
+          this.room = result.room
+        })
+      }
+      this.requestState()
+    } catch (e) {
+      runInAction(() => {
+        this.error = e instanceof Error ? e.message : 'Action failed'
       })
     }
   }
@@ -125,7 +161,12 @@ class GameStore {
   private connectWebSocket(): void {
     if (!this.room || !this.playerId) return
     
-    wsClient.connect(this.room.code, this.playerId, this.handleWSMessage.bind(this))
+    wsClient.connect(
+      this.room.code, 
+      this.playerId, 
+      this.room.game_type,
+      this.handleWSMessage.bind(this)
+    )
   }
 
   private handleWSMessage(event: string, data: unknown): void {
@@ -151,7 +192,9 @@ class GameStore {
       case 'game_started':
         runInAction(() => {
           const d = data as { room: Room }
-          this.room = d.room
+          if (d.room) {
+            this.room = d.room
+          }
           this.lastRoundResult = null
         })
         break

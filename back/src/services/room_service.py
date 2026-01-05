@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.config import settings
+from src.games.registry import game_registry
 from src.models import Room, RoomStatus, Player, GameRound, RoundStatus
 
 
@@ -78,7 +78,10 @@ class RoomService:
 
     async def _create_round(self, room: Room) -> GameRound:
         """Create a new game round with random target number."""
-        target = random.randint(settings.min_target_number, settings.max_target_number)
+        game_settings = game_registry.get_settings(room.game_type)
+        min_target = game_settings.get("min_target", 1)
+        max_target = game_settings.get("max_target", 100)
+        target = random.randint(min_target, max_target)
 
         game_round = GameRound(
             round_number=room.current_round_number,

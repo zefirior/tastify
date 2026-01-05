@@ -6,7 +6,7 @@ import { GamePage } from '@/pages/GamePage'
 import { ResultsPage } from '@/pages/ResultsPage'
 
 const App = observer(() => {
-  const { room, gameStatus } = gameStore
+  const { room } = gameStore
 
   // No room - show home page
   if (!room) {
