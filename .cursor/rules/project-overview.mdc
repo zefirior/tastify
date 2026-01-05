@@ -78,6 +78,8 @@ docker compose -f docker/docker-compose.yaml up --build
 
 ## Running Tests
 
+**Prerequisites**: Docker must be running (backend tests use testcontainers for PostgreSQL).
+
 ### All Tests
 ```bash
 ./scripts/run-tests.sh
@@ -86,8 +88,11 @@ docker compose -f docker/docker-compose.yaml up --build
 ### Backend Only
 ```bash
 ./scripts/run-tests.sh --backend-only
+
 # Or directly:
-cd back && uv run pytest -v
+cd back
+uv sync --all-extras  # Install dev dependencies (pytest, testcontainers, etc.)
+uv run pytest -v
 ```
 
 ### Frontend Only
@@ -98,8 +103,18 @@ cd back && uv run pytest -v
 ### E2E Tests (Playwright)
 ```bash
 ./scripts/run-tests.sh --e2e
+
 # Or directly:
 cd front && npm run test
+```
+
+### Running Specific Tests
+```bash
+# Run a specific test file
+cd back && uv run pytest tests/test_room_cleanup.py -v
+
+# Run a specific test
+cd back && uv run pytest "tests/test_room_service.py::TestRoomService::test_create_room" -v
 ```
 
 ## Key Technologies

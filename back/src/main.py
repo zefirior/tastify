@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.rooms import router as rooms_router
 from src.api.websocket import router as ws_router
 from src.jobs.game_timer import GameTimerJob
+from src.jobs.room_cleanup import RoomCleanupJob
 from src.services import connection_manager, games_storage
 
 
@@ -17,9 +18,11 @@ async def lifespan(app: FastAPI):
     
     # Start background tasks
     game_timer_job = GameTimerJob()
+    room_cleanup_job = RoomCleanupJob()
     
     tasks = [
         asyncio.create_task(game_timer_job.run()),
+        asyncio.create_task(room_cleanup_job.run()),
         asyncio.create_task(games_storage.start()),
     ]
     

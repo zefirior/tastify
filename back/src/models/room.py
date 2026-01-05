@@ -18,6 +18,7 @@ class RoomStatus(enum.Enum):
     WAITING = "waiting"
     PLAYING = "playing"
     FINISHED = "finished"
+    ABANDONED = "abandoned"  # Closed due to inactivity
 
 
 def generate_room_code() -> str:

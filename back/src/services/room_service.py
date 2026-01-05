@@ -51,11 +51,10 @@ class RoomService:
             return None
 
         player = Player(
-            room_id=room.id,
             name=player_name,
             is_host=False,
         )
-        self.session.add(player)
+        room.players.append(player)
         await self.session.flush()
 
         return room, player
@@ -82,12 +81,11 @@ class RoomService:
         target = random.randint(settings.min_target_number, settings.max_target_number)
 
         game_round = GameRound(
-            room_id=room.id,
             round_number=room.current_round_number,
             target_number=target,
             status=RoundStatus.ACTIVE,
         )
-        self.session.add(game_round)
+        room.rounds.append(game_round)
         await self.session.flush()
 
         # Reset all player guesses

@@ -16,5 +16,6 @@ class WSEventType:
     ROUND_FINISHED = "round_finished"
     GAME_FINISHED = "game_finished"
     GUESS_SUBMITTED = "guess_submitted"
+    ROOM_CLOSED = "room_closed"
     ERROR = "error"
 

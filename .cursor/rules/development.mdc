@@ -1,0 +1,137 @@
+---
+alwaysApply: true
+---
+# Development Workflow Rules
+
+## Planning First
+
+Before starting any development task, you MUST:
+
+1. **Analyze the requirements** - Understand what needs to be built or changed
+2. **Create a step-by-step plan** - Break down the work into clear, manageable steps
+3. **Identify affected areas** - Determine which files, modules, and tests will be impacted
+4. **Consider edge cases** - Think about error handling and boundary conditions upfront
+
+## Development Phase
+
+During implementation:
+
+- Follow existing code patterns and conventions in the codebase
+- Keep changes focused and minimal - avoid unrelated refactoring
+- Add appropriate logging and error handling
+- Update types/schemas as needed
+
+## Testing Requirements (MANDATORY)
+
+After completing development, you MUST write tests and verify behavior:
+
+### Test Coverage
+
+- Write unit tests for new business logic
+- Write integration tests for API endpoints and database operations
+- Update existing tests if behavior changed
+- Verify all tests pass before considering the task complete
+
+### Test Performance Rules
+
+**Tests MUST be fast and deterministic.** Follow these strict rules:
+
+1. **No real waiting/sleeping in tests** - Tests should not use `time.sleep()`, `asyncio.sleep()`, or any real-time delays
+2. **Maximum test duration** - Individual tests should complete in under 10 seconds
+3. **Performance regression limit** - Test suite should not become more than 10% slower after changes
+
+### Testing Async/Waiting Logic
+
+When testing code that involves waiting, polling, or timeouts (e.g., background jobs, timers):
+
+**DO NOT** test the actual waiting mechanism. Instead:
+
+1. **Mock time-based functions** - Override `asyncio.sleep`, `time.sleep`, or custom wait mechanisms
+2. **Inject test doubles** - Use dependency injection to replace waiting logic with immediate execution
+3. **Test state transitions** - Focus on testing the logic that runs before and after the wait
+4. **Use callbacks/events** - Structure code to be testable without real delays
+
+#### Example: Testing a Job with Waiting
+
+```python
+# BAD - Tests actual waiting (slow, flaky)
+async def test_job_completes():
+    job = MyJob()
+    await job.run()  # Contains asyncio.sleep(60)
+    assert job.completed  # Takes 60+ seconds!
+
+# GOOD - Mock the waiting mechanism
+async def test_job_completes(mocker):
+    mocker.patch('asyncio.sleep', return_value=None)
+    job = MyJob()
+    await job.run()  # Executes immediately
+    assert job.completed
+
+# BETTER - Inject a controllable wait mechanism
+async def test_job_completes():
+    mock_waiter = MockWaiter()  # Immediately resolves
+    job = MyJob(waiter=mock_waiter)
+    await job.run()
+    assert job.completed
+    assert mock_waiter.wait_called_with(expected_duration=60)
+```
+
+#### Example: Testing Polling Logic
+
+```python
+# BAD - Real polling with delays
+async def test_polling_finds_result():
+    result = await poll_until_ready(interval=1, timeout=30)
+    assert result is not None
+
+# GOOD - Mock the polling to return immediately
+async def test_polling_finds_result(mocker):
+    mocker.patch.object(Poller, 'check', side_effect=[None, None, 'found'])
+    mocker.patch('asyncio.sleep', return_value=None)
+    result = await poll_until_ready(interval=1, timeout=30)
+    assert result == 'found'
+```
+
+### Debugging and Verification
+
+Before marking a task complete:
+
+1. **Run all tests** - Execute the full test suite to catch regressions
+2. **Check test output** - Review test logs for warnings or unexpected behavior
+3. **Verify manually if needed** - For UI changes, verify in the browser
+4. **Check for linting errors** - Ensure code passes all linters
+
+### Running Tests
+
+**Prerequisites**: Docker must be running (testcontainers requires Docker for PostgreSQL).
+
+```bash
+# Install dev dependencies and run all backend tests
+cd back
+uv sync --all-extras
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_room_cleanup.py -v
+
+# Run specific test
+uv run pytest "tests/test_room_service.py::TestRoomService::test_create_room" -v
+
+# Run with output (useful for debugging)
+uv run pytest -v -s
+```
+
+The test infrastructure uses:
+- **pytest-asyncio** with session-scoped event loop
+- **testcontainers** to spin up PostgreSQL in Docker
+- Savepoint-based transaction isolation (each test runs in a transaction that gets rolled back)
+
+## Summary Checklist
+
+- [ ] Created a development plan
+- [ ] Implemented the feature/fix
+- [ ] Wrote tests (unit and/or integration)
+- [ ] Tests run in under 10 seconds each
+- [ ] No real sleep/wait calls in tests
+- [ ] All tests pass
+- [ ] No linting errors

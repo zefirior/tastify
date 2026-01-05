@@ -56,22 +56,31 @@ if [ "$RUN_BACKEND" = true ]; then
     log_step "Running backend tests..."
     cd "$BACK_DIR"
     
-    # Check for uv
-    if command_exists uv; then
-        log_info "Using uv to run tests"
-        if uv run pytest -v; then
-            log_success "Backend tests passed!"
-        else
-            BACKEND_RESULT=1
-            log_error "Backend tests failed!"
-        fi
+    # Check if Docker is running (required for testcontainers)
+    if ! docker info > /dev/null 2>&1; then
+        log_error "Docker is not running! Backend tests require Docker for testcontainers."
+        log_info "Please start Docker and try again."
+        BACKEND_RESULT=1
     else
-        log_warning "uv not found, trying pytest directly"
-        if pytest -v; then
-            log_success "Backend tests passed!"
+        # Check for uv
+        if command_exists uv; then
+            log_info "Using uv to run tests"
+            # Ensure dev dependencies are installed
+            uv sync --all-extras > /dev/null 2>&1
+            if uv run pytest -v; then
+                log_success "Backend tests passed!"
+            else
+                BACKEND_RESULT=1
+                log_error "Backend tests failed!"
+            fi
         else
-            BACKEND_RESULT=1
-            log_error "Backend tests failed!"
+            log_warning "uv not found, trying pytest directly"
+            if pytest -v; then
+                log_success "Backend tests passed!"
+            else
+                BACKEND_RESULT=1
+                log_error "Backend tests failed!"
+            fi
         fi
     fi
     
